@@ -12,6 +12,8 @@ class DatabaseSearcher:
         self.update_xquery()
 
     def update_xquery(self):
+        """Update XQuery for counting and searching if the search variables
+        have been manually changed."""
         self.xquery_search = self.generate_xquery_search(
             self.basex_db, self.xpath, self.start, self.end
         )
@@ -21,7 +23,7 @@ class DatabaseSearcher:
 
     @classmethod
     def generate_xquery_search(self, basex_db: str, xpath: str, start=None,
-                               end=None):
+                               end=None) -> str:
         query = 'for $node in db:open("' + basex_db + '")/treebank' \
                 + xpath + \
                 'let $tree := ($node/ancestor::alpino_ds)' \
@@ -50,11 +52,13 @@ class DatabaseSearcher:
         return query
 
     @classmethod
-    def generate_xquery_count(self, basex_db: str, xpath: str):
+    def generate_xquery_count(self, basex_db: str, xpath: str) -> str:
         return 'count(for $node in db:open("{}")/treebank{} return $node)' \
             .format(basex_db, xpath)
 
-    def search(self):
+    def search(self) -> str:
+        """Search according to prepared XQuery and return matches in XML as a
+        string"""
         try:
             result = self.session.query(self.xquery_search).execute()
         except OSError as err:
@@ -63,7 +67,9 @@ class DatabaseSearcher:
             )
         return result
 
-    def count(self):
+    def count(self) -> int:
+        """Count according to prepared XQuery and return the number of matches
+        as an integer"""
         try:
             result = self.session.query(self.xquery_count).execute()
             count = int(result)
