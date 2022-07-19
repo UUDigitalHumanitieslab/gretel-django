@@ -1,10 +1,10 @@
-### Preparatory code for switch to Django backend
+# Preparatory code for switch to Django backend
 
 The code in this directory is meant to explore how some important GrETEL
 functionality can be rewritten in Python and to find the most efficient
 solutions by benchmarking.
 
-# database_searcher.py
+## database_searcher.py
 
 A class to search in a single database (each treebank consists of one or
 more components, which in turn consist of one or more databases -- the
@@ -12,7 +12,7 @@ user does not see the individual databases). The class may end up in the
 Django application and will be used by higher-level code that searches
 entire components.
 
-# searcher_benchmark.py
+## searcher_benchmark.py
 
 This script was made to run the benchmarks of GitHub issue #3.
 
