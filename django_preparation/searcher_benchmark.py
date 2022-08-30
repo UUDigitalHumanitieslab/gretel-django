@@ -7,7 +7,7 @@ followed by a blank line, and the BaseX databases to search in divided
 by newlines.
 """
 
-from database_searcher import DatabaseSearcher
+from basex_search import generate_xquery_search, generate_xquery_count
 
 from timeit import default_timer as timer
 from BaseXClient import BaseXClient
@@ -26,8 +26,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('specification')
 parser.add_argument('--output', default='results.csv',
                     help='output csv file')
-parser.add_argument('--paging', default=None,
-                    type=int)
 args = parser.parse_args()
 logging.basicConfig(level=logging.INFO)
 
@@ -46,13 +44,10 @@ of = open(args.output, 'w')
 of_writer = csv.writer(of)
 columns = ['XPATH', 'Database', 'Database size (MiB)', 'Number of results',
            'Duration (count)', 'Duration (search)']
-if args.paging:
-    columns.extend(['Duration (search with paging)', 'Pages'])
 of_writer.writerow(columns)
 
 n_results_dict = {}
-duration_nopaging_dict = {}
-duration_paging_dict = {}
+duration_dict = {}
 xpath_nr = 0
 for xpath in xpaths:
     for db in dbs:
@@ -73,19 +68,20 @@ for xpath in xpaths:
             db_size = size_str
         # First a dummy search (first search is slower because of
         # caching)
-        searcher = DatabaseSearcher(session, db, xpath)
-        searcher.search()
+        search_xquery = generate_xquery_search(db, xpath)
+        session.query(search_xquery).execute()
         # Then count
         start_time = timer()
-        n_results = searcher.count()
+        count_xquery = generate_xquery_count(db, xpath)
+        n_results = int(session.query(count_xquery).execute())
         duration_count = timer() - start_time
         logging.info(
             'Counting      : {} results in {} seconds'
             .format(n_results, duration_count)
         )
-        # Then search without paging
+        # Then search
         start_time = timer()
-        result = searcher.search()
+        result = session.query(search_xquery).execute()
         # Check if the number of results is the same
         n_results_search = result.count('<match>')
         if n_results_search != n_results:
@@ -94,38 +90,14 @@ for xpath in xpaths:
                 'counting ({} versus {}).'
                 .format(n_results_search, n_results)
             )
-        duration_nopaging = timer() - start_time
+        duration = timer() - start_time
         logging.info(
-            'Without paging: {} results in {} seconds'
-            .format(n_results_search, duration_nopaging)
+            'Search: {} results in {} seconds'
+            .format(n_results_search, duration)
         )
         n_results_dict[(xpath, db)] = n_results
-        # With paging (if activated)
-        if args.paging:
-            start_time = timer()
-            start = 0
-            n_pages = 0
-            n_results = 0
-            while True:
-                end = start + args.paging
-                searcher.start = start
-                searcher.end = end
-                searcher.update_xquery()
-                result = searcher.search()
-                if result.strip() == '':
-                    break
-                n_results += result.count('<match>')
-                n_pages += 1
-                start = end
-            duration_paging = timer() - start_time
-            logging.info(
-                'With paging   : {} results in {} seconds ({} pages)'
-                .format(n_results, duration_paging, n_pages)
-            )
         csv_row = [xpath_nr + 1, db, db_size, n_results, duration_count,
-                   duration_nopaging]
-        if args.paging:
-            csv_row.extend([duration_paging, n_pages])
+                   duration]
         of_writer.writerow(csv_row)
     xpath_nr += 1
 logging.info('Results written to {}.'.format(args.output))
