@@ -93,8 +93,8 @@ export class ResultsService {
     ): Observable<SearchResults> {
         const observable = new Observable<SearchResults>(observer => {
             const worker = async () => {
-                let queryId: number = undefined;
-                let retrievedMatches: number = 0;
+                let queryId: number;
+                let retrievedMatches = 0;
 
                 while (!observer.closed) {
                     let results: SearchResults | false | null = null;
@@ -123,16 +123,14 @@ export class ResultsService {
                             retrievedMatches += results.hits.length;
 
                             // TODO maybe not the nicest way to show progress
-                            const percentage = Math.round(results.searchPercentage)
+                            const percentage = Math.round(results.searchPercentage);
                             if (!results.cancelled) {
                                 this.notificationService.add(
-                                    "Searching at " + 
-                                    percentage + "%", "success"
+                                    `Searching at ${percentage}%`, 'success'
                                 );
                             } else {
                                 this.notificationService.add(
-                                    "Search was cancelled at " + 
-                                    percentage + "%", "warning"
+                                    `Search was cancelled at ${percentage}%`, 'warning'
                                 );
                                 observer.complete();
                             }
@@ -176,8 +174,8 @@ export class ResultsService {
         xpath: string,
         corpus: string,
         components: string[],
-        queryId: number = undefined,
-        retrievedMatches: number = undefined,
+        queryId: number,
+        retrievedMatches: number,
         retrieveContext: boolean,
         isAnalysis = this.defaultIsAnalysis,
         metadataFilters = this.defaultMetadataFilters,
@@ -222,7 +220,7 @@ export class ResultsService {
         const data = {
             database: database,
             sentence_id: sentenceId
-        }
+        };
         const response = await this.http.post<ApiTreeResult>(
             url2,
             data
@@ -393,7 +391,7 @@ export class ResultsService {
             searchPercentage: results.search_percentage,
             errors: results.errors,
             cancelled: results.cancelled,
-            counts: await this.mapCounts(results),
+            counts: this.mapCounts(results),
         };
     }
 
@@ -424,15 +422,15 @@ export class ResultsService {
         }));
     }
 
-    private mapCounts(results: ApiSearchResult): Promise<ResultCount[]> {
-        return Promise.all(results.counts.map(async count => {
+    private mapCounts(results: ApiSearchResult): ResultCount[] {
+        return results.counts.map(count => {
             return {
                 component: count.component,
                 numberOfResults: count.number_of_results,
                 completed: count.completed,
                 percentage: count.percentage,
             };
-        }));
+        });
     }
 
     private mapMeta(data: {
@@ -544,7 +542,7 @@ export class ResultsService {
  * the plain text sentences, they same keys are used for results[4] containing the xml of
  * each hit.
  */
-type ApiSearchResult = {
+interface ApiSearchResult {
     results: {
         sentid: string,
         sentence: string,
@@ -555,18 +553,18 @@ type ApiSearchResult = {
         variables: string,
         component: string,
         database: string
-    }[],
-    query_id: number,
-    search_percentage: number,
-    errors: string,
-    cancelled?: boolean,
+    }[];
+    query_id: number;
+    search_percentage: number;
+    errors: string;
+    cancelled?: boolean;
     counts: {
         component: string,
         number_of_results: number,
         completed: boolean,
         percentage: number,
-    }[],
-};
+    }[];
+}
 
 /** Processed search results created from the response */
 export interface SearchResults {
@@ -576,7 +574,6 @@ export interface SearchResults {
     errors: string;
     cancelled?: boolean;
     counts: ResultCount[];
-    
 }
 
 export interface Hit {
@@ -674,7 +671,7 @@ export interface TreebankCount {
 
 export interface MetadataValueCounts { [key: string]: { [value: string]: number }; }
 
-type ApiTreeResult = {
-    tree?: string,
-    error?: string
+interface ApiTreeResult {
+    tree?: string;
+    error?: string;
 }
