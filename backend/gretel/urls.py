@@ -30,7 +30,6 @@ urlpatterns = [
     path('treebanks/', include('treebanks.urls')),
     path('parse/', include('parse.urls')),
     path('search/', include('search.urls')),
-    path('mwe/', include('mwe.urls')),
     path('admin', RedirectView.as_view(url='/admin/', permanent=True)),
     path('admin/', admin.site.urls),
     spa_url,  # catch-all; unknown paths to be handled by a SPA
