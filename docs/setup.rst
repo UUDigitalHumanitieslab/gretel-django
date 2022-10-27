@@ -13,6 +13,30 @@ BaseX database system if you want to manually perform your own queries.
    This chapter is not yet complete.
 
 
+Running a development server
+----------------------------
+After obtaining the source, follow these steps to setup a basic development
+server:
+
+* Make sure you have Python 3.8, 3.9 or 3.10 and Node.js 14 or higher
+  installed
+
+* (Recommended:) Create and activate a virtual environment for Python
+
+* Run ``npm install`` to install backend and frontend dependencies
+
+* Make sure that the BaseX server, the Alpino parser and the Redis
+  message broker are running (see below)
+
+* Run ``npm test`` to check if there are no problems with
+  your Python and Node.js versions and dependencies
+
+* Run ``npm start`` to start both the backend and the frontend
+
+Please note that while both the backend and the frontend will automatically
+reload
+
+
 Required background services
 ----------------------------
 For full functionality, GrETEL requires the following services:
@@ -64,7 +88,7 @@ For full functionality, GrETEL requires the following services:
 * The **Redis** message broker with the **Celery** task queue.
 
   Redis is used in combination with Celery to perform search
-  queries on the background. If Redis and Celery are not running, search
+  queries on the background. If Redis and Celery are both not running, search
   queries are performed immediately, which causes long waiting times when
   searching large treebanks.
 
@@ -76,9 +100,9 @@ For full functionality, GrETEL requires the following services:
     celery -A gretel worker -B -l INFO
 
 .. note::
-   GrETEL cannot efficiently detect the absence of a Celery worker, so
-   if you don't want to use Celery make sure that Redis is not running
-   either.
+   If Redis is running without any Celery worker, GrETEL will not be
+   able to detect this. In that case the search will seem to have started
+   but will never be executed.
 
 Checking the sanity of your installation
 ----------------------------------------
