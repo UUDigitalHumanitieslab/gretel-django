@@ -36,6 +36,16 @@ Representation of treebanks
 All structural information about the installed treebanks in GrETEL's
 relational database (managed by the Django
 
+Backend documentation
+---------------------
+
+The ``treebanks`` app
+`````````````````````
+
+.. automodule:: treebanks.models
+   :members:
+
+
 .. [#] The backend was written in PHP until GrETEL 4.
 .. [#] The separation of GrETEL in a frontend and a backend was an addition
        in GrETEL 4.
