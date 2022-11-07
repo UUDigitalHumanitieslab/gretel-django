@@ -20,6 +20,10 @@ def userinputyesno(prompt, default=False):
     else:
         default_view = ' [y/N]'
     sys.stderr.write(prompt + default_view + '\n')
+    global use_defaults
+    if use_defaults:
+        sys.stderr.write('Default answer given')
+        return default
     answer = input()
     if answer[:1].lower() == 'y':
         return True
@@ -52,6 +56,11 @@ class Command(BaseCommand):
             help='give user-friendly names to components that will be shown '
                  'in GrETEL according to a CSV file',
             default=None
+        )
+        parser.add_argument(
+            '--defaults',
+            help='answer the defaults to any interactive questions',
+            action='store_true'
         )
 
     class InputError(RuntimeError):
@@ -243,6 +252,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.group_by = options['group_by']
         self.input_dir = options['input_dir']
+        global use_defaults
+        use_defaults = options['defaults']
 
         # Load list of user-friendly components names, if given
         if options['components_names']:
@@ -276,7 +287,7 @@ class Command(BaseCommand):
         # Use the directory name as the title of the treebank
         treebank_title = os.path.basename(self.input_dir)
         # Prefix for BaseX databases
-        treebank_db = treebank_title.upper() + '_ID'
+        treebank_db = 'LASSYGR_' + treebank_title.upper() + '_ID'
 
         # Create treebank in database
         treebank_slug = slugify(treebank_title)
