@@ -127,6 +127,14 @@ class Command(BaseCommand):
         """
         if not self.group_by:
             return filename
+        if self.group_by == 'twnc':
+            # Special case for TWNC corpus: component name is newspaper
+            # name and year; filenames are like volkskrant20050726.data.dz
+            match = re.match(r"(^[a-z]*....)(.*)", filename)
+            if match:
+                return match.groups()[0]
+            else:
+                return 'anonymous-component'
         if self.group_by.isnumeric():
             # The prefix consists of the first given number of characters
             # (entered as <number>)
