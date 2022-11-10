@@ -69,7 +69,7 @@ export class MweResultsComponent extends ResultsComponent {
     }
 
     toggleExclude(query: MweQuery, event: Event) {
-        this.excludeQuery[query.rank] = (event.target as HTMLInputElement).checked;
+        this.excludeQuery[query.rank] = !this.excludeQuery[query.rank];
         this.emitBehaviour();
     }
 
