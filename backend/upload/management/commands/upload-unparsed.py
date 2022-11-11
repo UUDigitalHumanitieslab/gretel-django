@@ -25,4 +25,16 @@ class Command(BaseCommand):
         else:
             raise CommandError('Cannot work with compressed files for now. '
                                'Please provide a directory.')
+        self.stdout.write(self.style.SUCCESS(
+            'Inspecting input files...'
+        ))
         upload.prepare()
+        number_of_files = sum([len(x) for x in upload.components.values()])
+        number_of_components = len(upload.components)
+        self.stdout.write(self.style.SUCCESS(
+            'Found {} input files of {} type that will be placed in {} '
+            'components.'
+            .format(number_of_files, upload.get_input_format_display(),
+                    number_of_components)
+        ))
+        upload.process()
