@@ -54,8 +54,6 @@ class TreebankUpload(models.Model):
         datas = []
         for fieldname in self.metadata:
             field = self.metadata[fieldname]
-            if len(field['values']) >= 20:
-                continue
             data = {'field': fieldname, 'type': field['type']}
             if field.get('allnumeric', None):
                 if field['type'] != 'int':
@@ -67,6 +65,9 @@ class TreebankUpload(models.Model):
                 data['facet'] = 'slider'
             if 'facet' not in data:
                 data['facet'] = 'checkbox'
+            if len(field['values']) >= 20 and data['facet'] == 'checkbox':
+                # Do not include checkboxes that consist of too many values
+                continue
             datas.append(data)
         return datas
 
