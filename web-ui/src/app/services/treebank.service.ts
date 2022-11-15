@@ -91,6 +91,14 @@ interface UploadedTreebankMetadataResponse {
     show: '1' | '0';
 }
 
+interface DjangoTreebankMetadataResponse {
+    field: string;
+    type: 'text' | 'int' | 'date';
+    facet: 'checkbox' | 'slider' | 'range';
+    min_value: string | null;
+    max_value: string | null;
+}
+
 // not quite sure what this is yet
 interface UploadedTreebankShowResponse {
     basex_db: string;
@@ -177,6 +185,31 @@ function makeUploadedMetadata(item: UploadedTreebankMetadataResponse): TreebankM
         facet: item.facet === 'date_range' ? 'range' : item.facet,
         show: item.show === '1'
     };
+
+    if (['slider', 'range'].includes(metadata.facet)) {
+        switch (metadata.type) {
+            case 'int':
+                metadata.minValue = parseInt(item.min_value, 10);
+                metadata.maxValue = parseInt(item.max_value, 10);
+                return metadata;
+            case 'date':
+                metadata.minValue = new Date(item.min_value);
+                metadata.maxValue = new Date(item.max_value);
+                return metadata;
+        }
+    }
+
+    return metadata;
+}
+
+function makeDjangoMetadata(item: DjangoTreebankMetadataResponse): TreebankMetadata {
+    console.log('Metadata');
+    const metadata: TreebankMetadata = {
+        field: item.field,
+        type: item.type,
+        facet: item.facet,
+        show: true
+    }
 
     if (['slider', 'range'].includes(metadata.facet)) {
         switch (metadata.type) {
@@ -450,7 +483,12 @@ export class TreebankService {
         return new LazyTreebank(
             makeDjangoTreebank(bank),
             {
-                metadata: async () => undefined,
+                metadata: async () => {
+                    const djangoMetadata = await this.configurationService.getDjangoUrl('treebanks/treebank/' + bank.slug + '/metadata/')
+                        .then(url => this.http.get<{'metadata': DjangoTreebankMetadataResponse[]}>(url, { }).toPromise());
+                    console.log(djangoMetadata);
+                    return djangoMetadata.metadata.map(makeDjangoMetadata);
+                },
                 componentGroups: async () => undefined,
                 components: async () => {
                     const djangoComponents = await this.configurationService.getDjangoUrl('treebanks/treebank/' + bank.slug + '/components/')

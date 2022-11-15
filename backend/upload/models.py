@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+from lxml import etree
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -46,6 +47,59 @@ class TreebankUpload(models.Model):
     word_tokenized = models.BooleanField(null=True)
     sentences_have_labels = models.BooleanField(null=True)
     processed = models.DateTimeField(null=True, blank=True)
+
+    def get_metadata(self):
+        if not hasattr(self, 'metadata'):
+            raise UploadError('Treebank was not yet processed')
+        datas = []
+        for fieldname in self.metadata:
+            field = self.metadata[fieldname]
+            if len(field['values']) >= 20:
+                continue
+            data = {'field': fieldname, 'type': field['type']}
+            if field.get('allnumeric', None):
+                if field['type'] != 'int':
+                    print('Changing metadata field {} from type {} to int'
+                          .format(fieldname, field['type']))
+                    data['type'] = 'int'
+                data['min_value'] = field['min_value']
+                data['max_value'] = field['max_value']
+                data['facet'] = 'slider'
+            if 'facet' not in data:
+                data['facet'] = 'checkbox'
+            datas.append(data)
+        return datas
+
+    def _discover_metadata(self, xml: str):
+        root = etree.fromstring(xml)
+        for sentence in root.findall('alpino_ds'):
+            metadata = sentence.find('metadata')
+            for meta in metadata.findall('meta'):
+                name = meta.get('name')
+                type_ = meta.get('type')
+                value = meta.get('value')
+                m = self.metadata.get(name, None)
+                if m:
+                    if len(m['values']) < 21:
+                        # Only add to values set if not too large -
+                        # we only use this to test if a filter should be
+                        # created
+                        m['values'].add(value)
+                    if m.get('allnumeric', None):
+                        if value.isnumeric():
+                            m['min_value'] = min(m['min_value'], int(value))
+                            m['max_value'] = max(m['max_value'], int(value))
+                        else:
+                            m['allnumeric'] = False
+                else:
+                    m = {}
+                    m['type'] = type_
+                    m['values'] = {value}
+                    if value.isnumeric():
+                        m['allnumeric'] = True
+                        m['min_value'] = int(value)
+                        m['max_value'] = int(value)
+                    self.metadata[name] = m
 
     def _probe_file(self, path):
         filename = str(path)
@@ -178,6 +232,7 @@ class TreebankUpload(models.Model):
         basexdb_objs = []
         total_number_of_files = sum([len(x) for x in self.components.values()])
         total_processed_files = 0
+        self.metadata = {}
         for component in self.components:
             print('Processing component {} out of {}'
                   .format(len(component_objs) + 1, len(self.components)))
@@ -193,6 +248,8 @@ class TreebankUpload(models.Model):
             db_sequence = 0
             for result in self._generate_blocks(filenames, componentslug):
                 doc, words, sentences, files_processed = result
+                self._discover_metadata(doc)
+                print(self.get_metadata())
                 nr_words += words
                 nr_sentences += sentences
                 dbname = (treebankslug + '_' + componentslug + '_' +
@@ -212,6 +269,7 @@ class TreebankUpload(models.Model):
             total_processed_files += files_processed
             comp_obj.nr_sentences = nr_sentences
             comp_obj.nr_words = nr_words
+        treebank.metadata = self.get_metadata()
         treebank.save()
         for comp in component_objs:
             comp.save()

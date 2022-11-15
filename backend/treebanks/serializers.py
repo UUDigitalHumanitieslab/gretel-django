@@ -14,3 +14,9 @@ class ComponentSerializer(serializers.ModelSerializer):
         model = Component
         fields = ['slug', 'title', 'description', 'nr_sentences', 'nr_words',
                   'variant', 'group']
+
+
+class MetadataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Treebank
+        fields = ['metadata']
