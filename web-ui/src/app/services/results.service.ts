@@ -129,7 +129,8 @@ export class ResultsService {
                         if (results) {
                             observer.next(results);
                             queryId = results.queryId;
-                            retrievedMatches += results.hits.length;
+                            // retrievedMatches += results.hits.length;
+                            retrievedMatches = results.continueFrom;
 
                             // TODO maybe not the nicest way to show progress
                             const percentage = Math.round(results.searchPercentage)
@@ -403,6 +404,7 @@ export class ResultsService {
             errors: results.errors,
             cancelled: results.cancelled,
             counts: await this.mapCounts(results),
+            continueFrom: results.continue_from
         };
     }
 
@@ -581,6 +583,7 @@ type ApiSearchResult = {
         completed: boolean,
         percentage: number,
     }[],
+    continue_from: number,
 };
 
 /** Processed search results created from the response */
@@ -591,7 +594,7 @@ export interface SearchResults {
     errors: string;
     cancelled?: boolean;
     counts: ResultCount[];
-
+    continueFrom: number;
 }
 
 export interface Hit {
