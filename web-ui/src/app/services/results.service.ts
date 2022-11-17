@@ -129,7 +129,6 @@ export class ResultsService {
                         if (results) {
                             observer.next(results);
                             queryId = results.queryId;
-                            // retrievedMatches += results.hits.length;
                             retrievedMatches = results.continueFrom;
 
                             // TODO maybe not the nicest way to show progress
