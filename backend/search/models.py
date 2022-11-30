@@ -292,6 +292,10 @@ class SearchQuery(models.Model):
         all_matches: List[dict] = []
         counts = []
 
+        # In the following code we loop over `self.results` twice:
+        # 1. First we collect matches, and for that we would like to stop once
+        # the desired amount of matches is reached.
+
         if to_number is None or to_number > from_number:
             for result_obj in self.results.all().order_by('component'):
                 if not result_obj.search_completed:
@@ -310,6 +314,9 @@ class SearchQuery(models.Model):
                 if to_number is not None and len(all_matches) > to_number:
                     break
 
+        # 2. Here we collect statistics, and for that we would
+        # like to loop over the complete results set.
+
         for result_obj in self.results.all().order_by('component'):
             # Count completed part (for all results)
             if result_obj.completed_part is not None:
@@ -319,7 +326,7 @@ class SearchQuery(models.Model):
                 counts.append({
                     'component': result_obj.component.slug,
                     'number_of_results': result_obj.number_of_results,
-                    'completed': result_obj.search_completed,
+                    'completed': result_obj.search_completed is not None,
                     'percentage': percentage,
                 })
 
