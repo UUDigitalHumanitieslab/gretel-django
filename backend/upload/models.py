@@ -1,20 +1,24 @@
 from pathlib import Path
 import re
 from lxml import etree
+import logging
 
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 
 from corpus2alpino.converter import Converter
-from corpus2alpino.annotators.alpino import AlpinoAnnotator
 from corpus2alpino.collectors.filesystem import FilesystemCollector
 from corpus2alpino.targets.memory import MemoryTarget
 from corpus2alpino.writers.lassy import LassyWriter
 
 from treebanks.models import Treebank, Component, BaseXDB
-from services.alpino import alpino
+from services.alpino import alpino, AlpinoError
 from services.basex import basex
+
+logger = logging.getLogger(__name__)
+
+MAXIMUM_DATABASE_SIZE = 1024 * 1024 * 10  # 10 MiB
 
 
 class UploadError(RuntimeError):
@@ -22,6 +26,14 @@ class UploadError(RuntimeError):
 
 
 class TreebankUpload(models.Model):
+    '''Class to upload texts of various input formats to GrETEL. The model
+    can keep information about the upload progress during the various stages
+    of the process (i.e. after uploading and inspecting the files, during
+    processing and after processing), allowing user interaction in between,
+    but if the process can be executed in one run (e.g. after calling a
+    Django management command) it does not have to be saved at all. To use,
+    make sure that input_file or input_dir is set and subsequently call
+    prepare() and process().'''
     ALPINO = 'A'
     CHAT = 'C'
     TXT = 'T'
@@ -49,16 +61,25 @@ class TreebankUpload(models.Model):
     processed = models.DateTimeField(null=True, blank=True)
 
     def get_metadata(self):
-        if not hasattr(self, 'metadata'):
+        '''Return a dict containing the discovered metadata of this treebank,
+        available after processing has finished. Format is the same as in the
+        Treebank model.'''
+        # This method uses the private _metadata attribute but does some
+        # optimization by probing metadata facets (e.g. slider if all
+        # values of the field are numeric, otherwise checkbox) and removing
+        # metadata fields with too many different values.
+        if not hasattr(self, '_metadata'):
             raise UploadError('Treebank was not yet processed')
         datas = []
-        for fieldname in self.metadata:
-            field = self.metadata[fieldname]
+        for fieldname in self._metadata:
+            field = self._metadata[fieldname]
             data = {'field': fieldname, 'type': field['type']}
             if field.get('allnumeric', None):
                 if field['type'] != 'int':
-                    print('Changing metadata field {} from type {} to int'
-                          .format(fieldname, field['type']))
+                    logger.info(
+                        'Changing metadata field {} from type {} to int'
+                        .format(fieldname, field['type'])
+                    )
                     data['type'] = 'int'
                 data['min_value'] = field['min_value']
                 data['max_value'] = field['max_value']
@@ -72,6 +93,9 @@ class TreebankUpload(models.Model):
         return datas
 
     def _discover_metadata(self, xml: str):
+        '''Helper method to discover the metadata for a number of sentences
+        (to be passed in xml as the argument to this method). This method
+        updates the private _metadata class attribute.'''
         root = etree.fromstring(xml)
         for sentence in root.findall('alpino_ds'):
             metadata = sentence.find('metadata')
@@ -79,7 +103,7 @@ class TreebankUpload(models.Model):
                 name = meta.get('name')
                 type_ = meta.get('type')
                 value = meta.get('value')
-                m = self.metadata.get(name, None)
+                m = self._metadata.get(name, None)
                 if m:
                     if len(m['values']) < 21:
                         # Only add to values set if not too large -
@@ -100,9 +124,10 @@ class TreebankUpload(models.Model):
                         m['allnumeric'] = True
                         m['min_value'] = int(value)
                         m['max_value'] = int(value)
-                    self.metadata[name] = m
+                    self._metadata[name] = m
 
     def _probe_file(self, path):
+        '''Probe file format to allow autodiscovery'''
         filename = str(path)
         if filename.lower().endswith('.txt'):
             return self.TXT
@@ -119,10 +144,11 @@ class TreebankUpload(models.Model):
         return None
 
     def _unpack(self):
-        '''Unpack compressed input file and set input_dir'''
+        '''Unpack compressed input file and set input_dir.
+        TODO: not yet implemented.'''
         if not self.input_file:
             raise UploadError('Need input_file to unpack')
-        pass
+        raise UploadError('Unpacking not yet implemented')
 
     def _read_input_files(self):
         '''Divide extracted files into components and probe input format'''
@@ -162,11 +188,18 @@ class TreebankUpload(models.Model):
         self.components = components
 
     def prepare(self):
+        '''Unpack (if input file is zipped) and inspect files. If this
+        method runs without error, the processing is ready to start and
+        the components class attribute (a dict of all components with
+        the corresponding filenames) is available.'''
         if not self.input_dir:
             self._unpack()
         self._read_input_files()
 
     def _generate_blocks(self, filenames, componentslug):
+        '''A generator function converting all files in filenames to
+        Alpino, yielding multiple strings ready to be added to BaseX,
+        respecting MAXIMUM_DATABASE_SIZE.'''
         current_output = []
         current_length = 0
         current_id = 0
@@ -182,8 +215,8 @@ class TreebankUpload(models.Model):
             try:
                 results = list(parses)
             except Exception as e:
-                print('Could not process file {} - skipping: {}'
-                      .format(filename, str(e)))
+                logger.error('Could not process file {} - skipping: {}'
+                             .format(filename, str(e)))
                 current_file += 1
                 continue
             assert len(results) == 1
@@ -210,7 +243,7 @@ class TreebankUpload(models.Model):
                     line = line[:tagend_pos] + id_attr + line[tagend_pos:]
                     current_id += 1
                 current_output.append(line)
-            if current_length > 1024*100:
+            if current_length > MAXIMUM_DATABASE_SIZE:
                 yield ('<treebank>' + ''.join(current_output) + '</treebank>',
                        nr_words, nr_sentences, current_file)
                 current_length = 0
@@ -221,22 +254,38 @@ class TreebankUpload(models.Model):
                nr_words, nr_sentences, current_file)
 
     def process(self):
-        '''Process prepared treebank upload'''
+        '''Process prepared treebank upload. This method converts the
+        prepared input files to Alpino format, uploads them to BaseX,
+        probes metadata and creates Treebank/Component/BaseXDB model
+        instances.'''
+        try:
+            alpino.initialize()
+        except AlpinoError as e:
+            raise UploadError('Alpino not available: {}'.format(str(e)))
+        if not basex.test_connection():
+            raise UploadError('BaseX not available')
+
         # Check if preparation has been done yet
-        # TODO check if components is set
-        alpino.initialize()
-        if not self.input_dir:
-            raise UploadError('input_dir not set')
+        if not self.input_dir or not hasattr(self, 'components'):
+            raise UploadError('prepare() has to be called first')
+
         treebankslug = slugify(Path(self.input_dir).name)
+
+        # Check if treebank already exists
+        if Treebank.objects.filter(slug=treebankslug).exists():
+            raise UploadError('Treebank {} already exists.'
+                              .format(treebankslug))
+
         treebank = Treebank(slug=treebankslug, title=treebankslug)
+        treebank.save()
         component_objs = []
         basexdb_objs = []
         total_number_of_files = sum([len(x) for x in self.components.values()])
         total_processed_files = 0
-        self.metadata = {}
+        self._metadata = {}
         for component in self.components:
-            print('Processing component {} out of {}'
-                  .format(len(component_objs) + 1, len(self.components)))
+            logger.info('Processing component {} out of {}'
+                        .format(len(component_objs) + 1, len(self.components)))
             nr_words = 0
             nr_sentences = 0
             componentslug = slugify(component)
@@ -250,30 +299,27 @@ class TreebankUpload(models.Model):
             for result in self._generate_blocks(filenames, componentslug):
                 doc, words, sentences, files_processed = result
                 self._discover_metadata(doc)
-                print(self.get_metadata())
                 nr_words += words
                 nr_sentences += sentences
+                comp_obj.nr_sentences = nr_sentences
+                comp_obj.nr_words = nr_words
+                comp_obj.save()
                 dbname = (treebankslug + '_' + componentslug + '_' +
                           str(db_sequence)).upper()
                 basexdb_obj = BaseXDB(dbname)
                 basexdb_objs.append(basexdb_obj)
                 basexdb_obj.component = comp_obj
                 basex.create(dbname, doc)
+                basexdb_obj.size = basexdb_obj.get_db_size()
+                basexdb_obj.save()
                 db_sequence += 1
                 percentage_component = int(files_processed
                                            / len(filenames) * 100)
                 percentage = int((files_processed + total_processed_files) /
                                  total_number_of_files * 100)
-                print('{} out of {} files processed ({}%, {}% of total)'
-                      .format(files_processed, len(filenames),
-                              percentage_component, percentage))
+                logger.info('{} out of {} files processed ({}%, {}% of total)'
+                            .format(files_processed, len(filenames),
+                                    percentage_component, percentage))
             total_processed_files += files_processed
-            comp_obj.nr_sentences = nr_sentences
-            comp_obj.nr_words = nr_words
         treebank.metadata = self.get_metadata()
         treebank.save()
-        for comp in component_objs:
-            comp.save()
-        for db in basexdb_objs:
-            db.size = db.get_db_size()
-            db.save()

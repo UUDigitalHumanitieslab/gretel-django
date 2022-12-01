@@ -2,7 +2,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
-from upload.models import TreebankUpload
+from upload.models import TreebankUpload, UploadError
 from treebanks.models import Treebank, Component, BaseXDB
 from services.basex import basex
 
@@ -28,7 +28,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             'Inspecting input files...'
         ))
-        upload.prepare()
+        try:
+            upload.prepare()
+        except UploadError as err:
+            self.stdout.write(self.style.ERROR(
+                'Upload preparation failed: {}'.format(str(err))
+            ))
         number_of_files = sum([len(x) for x in upload.components.values()])
         number_of_components = len(upload.components)
         self.stdout.write(self.style.SUCCESS(
@@ -37,4 +42,9 @@ class Command(BaseCommand):
             .format(number_of_files, upload.get_input_format_display(),
                     number_of_components)
         ))
-        upload.process()
+        try:
+            upload.process()
+        except UploadError as err:
+            self.stdout.write(self.style.ERROR(
+                'Upload preparation failed: {}'.format(str(err))
+            ))
