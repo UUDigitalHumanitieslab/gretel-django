@@ -223,9 +223,15 @@ class TreebankUpload(models.Model):
             parse = results[0]
             current_file += 1
             current_length += len(parse)
-            stripped = parse.strip().removeprefix(
-                '<?xml version="1.0" encoding="UTF-8"?>\n<treebank>'
-            ).removesuffix('</treebank>')
+            stripped = parse.strip()
+            stripped = re.sub(
+                '^' + re.escape(
+                    '<?xml version="1.0" encoding="UTF-8"?>\n<treebank>'
+                ), '', stripped
+            )  # Alternative for str.removeprefix()
+            stripped = re.sub(
+                re.escape('</treebank>') + '$', '', stripped
+            )
             lines = stripped.split('\n')
             for line in lines:
                 if 'cat="top"' in line:
