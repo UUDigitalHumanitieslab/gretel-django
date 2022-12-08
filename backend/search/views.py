@@ -18,9 +18,9 @@ from .basex_search import (
 from .tasks import run_search_query
 from services.basex import basex
 
-from mwe_query import expand_index_nodes
+from sastadev.treebankfunctions import indextransform
+from mwe_query.lcat import expandnonheadwords
 from lxml import etree
-import xml.etree.ElementTree as ET
 
 import logging
 
@@ -105,21 +105,16 @@ def _get_or_create_components(component_slugs, treebank):
 def filter_subset_results(results, xpath, should_expand_index):
     out = []
     for result in results:
-        # expand_index_nodes from mwe-query is written using python's ElementTree
-        # library, and at this point in the process we no longer have the tree
-        # in context. So we have to parse it again from an XML string.
-        sentence = ET.fromstring(result['xml_sentences'])
+        # important: we have to use lxml.etree and not Python's builtin ElementTree
+        sentence = etree.fromstring(result['xml_sentences'])
         expanded = sentence
         if should_expand_index:
             try:
-                expanded = expand_index_nodes(sentence)
+                expanded = indextransform(expandnonheadwords(sentence))
             except Exception:
                 log.exception('Failed expanding index nodes for sentence')
 
-        # Some of the XPath queries that we run are not supported by python's ElementTree
-        # so we need to switch over to lxml's etree.
-        converted = etree.fromstring(ET.tostring(expanded))
-        if converted.xpath(xpath):
+        if expanded.xpath(xpath):
             out.append(result)
 
     return out

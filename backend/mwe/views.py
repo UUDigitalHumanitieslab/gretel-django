@@ -1,22 +1,25 @@
-from django.http import HttpResponse
+import logging
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ModelViewSet
 
-from mwe_query import Mwe
+from mwe_query.canonicalform import generatequeries
 
 from .models import CanonicalForm, XPathQuery
 from .serializers import CanonicalFormSerializer, XPathQuerySerializer, MweQuerySerializer
-from services.alpino import alpino
+
+
+log = logging.getLogger(__name__)
+
 
 class CanonicalFormList(ListAPIView):
     queryset = CanonicalForm.objects.all()
     serializer_class = CanonicalFormSerializer
 
 
-def generate_query(sentence, rank):
+def generate_queries(sentence):
     """ Generates a set of queries using the mwe-query package.
     (https://github.com/UUDigitalHumanitieslab/mwe-query)
 
@@ -33,12 +36,13 @@ def generate_query(sentence, rank):
     """
 
     # TODO: we could maybe replace the whole rank idea with an is_superset boolean
-    mwe = Mwe(sentence)
-    alpino.initialize()
-    tree = alpino.client.parse_line(mwe.can_form, 'mwe')
-    mwe.set_tree(tree)
-    generated = mwe.generate_queries()[rank - 1]
-    return MweQuerySerializer(generated).data
+    generated = generatequeries(sentence)
+    assert len(generated) == 3
+    return [
+        dict(xpath=generated[0], description='Multi-word expression query', rank=1),
+        dict(xpath=generated[1], description='Near-miss query', rank=2),
+        dict(xpath=generated[2], description='Superset query', rank=3),
+    ]
 
 
 class GenerateMweQueries(APIView):
@@ -46,22 +50,23 @@ class GenerateMweQueries(APIView):
         """ Generate XPath queries for a given canonical form of a MWE.
         If the MWE is a known form, it may have manually adjusted stored queries.
         Otherwise, queries are generated on-the-fly """
-        queries = dict()
         text = request.data['canonical'].lower()
         canonical = CanonicalForm.objects.filter(text=text).first()
 
-        if canonical:
-            # look for saved queries
-            for query in canonical.xpathquery_set.all():
-                queries[query.rank] = XPathQuerySerializer(query).data
-
+        queries = dict()
         try:
+            generated = generate_queries(text)
             # complement saved queries with newly generated ones, based on rank
-            for rank in range(1, 4):
-                if rank not in queries:
-                    queries[rank] = generate_query(text, rank)
-        except Exception as e:
+            for i in range(len(generated)):
+                queries[i] = MweQuerySerializer(generated[i]).data
+        except Exception:
+            log.exception('Could not generate MWE queries')
             return Response('Could not generate MWE queries', status=500)
+
+        if canonical:
+            # look for saved queries, replace generated with saved ones
+            for query in canonical.xpathquery_set.all():
+                queries[query.rank - 1] = XPathQuerySerializer(query).data
 
         return Response(queries.values())
 
