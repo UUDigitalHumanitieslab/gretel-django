@@ -28,6 +28,7 @@ class AlpinoService:
                 else:
                     raise AlpinoError('Alpino has not been configured.')
                 self.client = annotator.client
+                self.annotator = annotator
             except Exception as e:
                 raise AlpinoError(str(e))
 

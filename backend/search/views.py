@@ -325,7 +325,7 @@ def metadata_count_view(request):
             component = Component.objects.get(
                 slug=component_slug, treebank__slug=treebank
             )
-            if not component.contains_metadata:
+            if not component.treebank.metadata:
                 continue
             dbs = component.get_databases().keys()
         for db in dbs:

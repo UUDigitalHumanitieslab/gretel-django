@@ -14,17 +14,12 @@ class BaseXDBInline(admin.TabularInline):
 
 @admin.register(Treebank)
 class TreebankAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'title', 'uploaded_by')
+    list_display = ('slug', 'title')
     ordering = ('slug',)
     fieldsets = (
         (None, {
             'fields': ('slug', 'title', 'description', 'url_more_info',
-                       'variants', 'groups')
-        }),
-        ('For uploaded treebanks', {
-            'fields': ('input_file', 'uploaded_by', 'public',
-                       'sentence_tokenized', 'word_tokenized',
-                       'sentences_have_labels', 'processed')
+                       'variants', 'groups', 'metadata')
         }),
     )
     inlines = [ComponentInline]

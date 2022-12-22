@@ -25,15 +25,9 @@ class Treebank(models.Model):
     upload_timestamp = models.DateTimeField(
         verbose_name='Upload date and time', null=True, blank=True
     )
-    uploaded_by = models.ForeignKey(User, null=True, blank=True,
-                                    on_delete=models.SET_NULL)
-    public = models.BooleanField(default=True)
-    sentence_tokenized = models.BooleanField(null=True)
-    word_tokenized = models.BooleanField(null=True)
-    sentences_have_labels = models.BooleanField(null=True)
-    processed = models.DateTimeField(null=True, blank=True)
     variants = models.JSONField(blank=True, default=list)
     groups = models.JSONField(blank=True, default=dict)
+    metadata = models.JSONField(blank=True, default=dict)
 
     def __str__(self):
         return '{}'.format(self.slug)
@@ -51,7 +45,6 @@ class Component(models.Model):
     )
     treebank = models.ForeignKey(Treebank, on_delete=models.CASCADE,
                                  related_name='components')
-    contains_metadata = models.BooleanField(default=False)
     variant = models.CharField(max_length=100, blank=True, default='')
     group = models.CharField(max_length=100, blank=True, default='')
 
