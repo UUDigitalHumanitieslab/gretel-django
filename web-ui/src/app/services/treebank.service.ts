@@ -203,7 +203,6 @@ function makeUploadedMetadata(item: UploadedTreebankMetadataResponse): TreebankM
 }
 
 function makeDjangoMetadata(item: DjangoTreebankMetadataResponse): TreebankMetadata {
-    console.log('Metadata');
     const metadata: TreebankMetadata = {
         field: item.field,
         type: item.type,
@@ -486,7 +485,6 @@ export class TreebankService {
                 metadata: async () => {
                     const djangoMetadata = await this.configurationService.getDjangoUrl('treebanks/treebank/' + bank.slug + '/metadata/')
                         .then(url => this.http.get<{'metadata': DjangoTreebankMetadataResponse[]}>(url, { }).toPromise());
-                    console.log(djangoMetadata);
                     return djangoMetadata.metadata.map(makeDjangoMetadata);
                 },
                 componentGroups: async () => undefined,
