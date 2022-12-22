@@ -34,27 +34,24 @@ class TreebankUpload(models.Model):
     Django management command) it does not have to be saved at all. To use,
     make sure that input_file or input_dir is set and subsequently call
     prepare() and process().'''
-    ALPINO = 'A'
-    CHAT = 'C'
-    TXT = 'T'
-    FOLIA = 'F'
-    FORMAT_CHOICES = [
-        (ALPINO, 'Alpino'),
-        (CHAT, 'CHAT'),
-        (TXT, 'plain text'),
-        (FOLIA, 'FoLiA'),
-    ]
+    class InputFormat(models.TextChoices):
+        ALPINO = 'A', 'Alpino'
+        CHAT = 'C', 'CHAT'
+        TXT = 'T', 'plain text'
+        FOLIA = 'F', 'FoLiA'
+    MAX_METADATA_OPTIONS = 20
+
     treebank = models.OneToOneField(Treebank, on_delete=models.SET_NULL,
                                     null=True)
     input_file = models.FileField(upload_to='uploaded_treebanks/', blank=True)
     input_dir = models.CharField(max_length=255, blank=True)
-    input_format = models.CharField(max_length=2, choices=FORMAT_CHOICES)
+    input_format = models.CharField(max_length=2, choices=InputFormat.choices)
     upload_timestamp = models.DateTimeField(
         verbose_name='Upload date and time', null=True, blank=True
     )
     uploaded_by = models.ForeignKey(User, null=True, blank=True,
                                     on_delete=models.SET_NULL)
-    public = models.BooleanField(default=True)
+    public = models.BooleanField(default=False)
     sentence_tokenized = models.BooleanField(null=True)
     word_tokenized = models.BooleanField(null=True)
     sentences_have_labels = models.BooleanField(null=True)
@@ -86,7 +83,8 @@ class TreebankUpload(models.Model):
                 data['facet'] = 'slider'
             if 'facet' not in data:
                 data['facet'] = 'checkbox'
-            if len(field['values']) >= 20 and data['facet'] == 'checkbox':
+            if len(field['values']) > self.MAX_METADATA_OPTIONS and \
+                    data['facet'] == 'checkbox':
                 # Do not include checkboxes that consist of too many values
                 continue
             datas.append(data)
@@ -105,7 +103,7 @@ class TreebankUpload(models.Model):
                 value = meta.get('value')
                 m = self._metadata.get(name, None)
                 if m:
-                    if len(m['values']) < 21:
+                    if len(m['values']) <= (self.MAX_METADATA_OPTIONS + 1):
                         # Only add to values set if not too large -
                         # we only use this to test if a filter should be
                         # created
@@ -130,17 +128,17 @@ class TreebankUpload(models.Model):
         '''Probe file format to allow autodiscovery'''
         filename = str(path)
         if filename.lower().endswith('.txt'):
-            return self.TXT
+            return self.InputFormat.TXT
         elif filename.lower().endswith('.cha'):
-            return self.CHAT
+            return self.InputFormat.CHAT
         elif filename.lower().endswith('.xml'):
             with open(filename, 'r') as f:
                 firstline = f.readline()
                 secondline = f.readline()
                 if firstline.startswith('<FoLiA'):
-                    return self.FOLIA
+                    return self.InputFormat.FOLIA
                 elif secondline.startswith('<alpino_ds'):
-                    return self.ALPINO
+                    return self.InputFormat.ALPINO
         return None
 
     def _unpack(self):
@@ -150,42 +148,36 @@ class TreebankUpload(models.Model):
             raise UploadError('Need input_file to unpack')
         raise UploadError('Unpacking not yet implemented')
 
+    def _add_file(self, path: Path, component: str):
+        '''Include the file if it is of a supported format and if no
+        files of another supported format had been found. Otherwise
+        ignore the file.'''
+        format = self._probe_file(path)
+        if format:
+            if self.input_format and format != self.input_format:
+                raise UploadError(
+                    'Different input formats found ({} and {}).'
+                    .format(self.input_format, format)
+                )
+            self.input_format = format
+            if component not in self.components:
+                self.components[component] = []
+            self.components[component].append(path)
+
     def _read_input_files(self):
         '''Divide extracted files into components and probe input format'''
         inputpath = Path(self.input_dir)
 
         # Put all toplevel files in a 'main' component and all files
         # in a subdirectory in a component with the name of the directory
-        components = {}
+        self.components = {}
         for entry in inputpath.glob('*'):
             if entry.is_file():
-                format = self._probe_file(entry)
-                if format:
-                    if self.input_format and format != self.input_format:
-                        raise UploadError(
-                            'Different input formats found ({} and {}).'
-                            .format(self.input_format, format)
-                        )
-                    self.input_format = format
-                    if 'main' not in components:
-                        # TODO what to do if one dir is named main?
-                        components['main'] = []
-                    components['main'].append(entry)
+                self._add_file(entry, 'main')
             if entry.is_dir():
                 files = entry.glob('**/*')
                 for f in files:
-                    format = self._probe_file(f)
-                    if format:
-                        if self.input_format and format != self.input_format:
-                            raise UploadError(
-                                'Different input formats found ({} and {}).'
-                                .format(self.input_format, format)
-                            )
-                        self.input_format = format
-                        if entry.name not in components:
-                            components[entry.name] = []
-                        components[entry.name].append(f)
-        self.components = components
+                    self._add_file(f, entry.name)
 
     def prepare(self):
         '''Unpack (if input file is zipped) and inspect files. If this
@@ -200,6 +192,9 @@ class TreebankUpload(models.Model):
         '''A generator function converting all files in filenames to
         Alpino, yielding multiple strings ready to be added to BaseX,
         respecting MAXIMUM_DATABASE_SIZE.'''
+        # This method directly manipulates the XML using regular expressions,
+        # but it may be a good idea to use lxml for this because of
+        # possible changes in what Alpino returns.
         current_output = []
         current_length = 0
         current_id = 0
@@ -250,12 +245,14 @@ class TreebankUpload(models.Model):
                     current_id += 1
                 current_output.append(line)
             if current_length > MAXIMUM_DATABASE_SIZE:
+                # Yield as soon as the maximum length is reached
                 yield ('<treebank>' + ''.join(current_output) + '</treebank>',
                        nr_words, nr_sentences, current_file)
                 current_length = 0
                 nr_words = 0
                 nr_sentences = 0
                 current_output.clear()
+        # Yield once more as soon as all files have been read
         yield ('<treebank>' + ''.join(current_output) + '</treebank>',
                nr_words, nr_sentences, current_file)
 
@@ -300,6 +297,7 @@ class TreebankUpload(models.Model):
             component_objs.append(comp_obj)
             filenames = [str(x) for x in self.components[component]]
             if not len(filenames):
+                logger.warning('Component {} is empty.'.format(component))
                 continue
             db_sequence = 0
             for result in self._generate_blocks(filenames, componentslug):
