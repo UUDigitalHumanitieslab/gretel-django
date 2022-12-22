@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { MweQuerySet, MweQuery } from '../../../services/mwe.service';
+import { faAngleDown } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'grt-results-query-menu',
@@ -7,6 +8,8 @@ import { MweQuerySet, MweQuery } from '../../../services/mwe.service';
   styleUrls: ['./query-menu.component.scss']
 })
 export class ResultsQueryMenuComponent {
+    faAngleDown = faAngleDown;
+
     public dropdownActive = false;
 
     @Input()
