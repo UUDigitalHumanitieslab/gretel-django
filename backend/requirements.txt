@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
--e git+https://github.com/UUDigitalHumanitieslab/mwe-query#egg=mwe-query
+-e git+https://github.com/UUDigitalHumanitieslab/mwe-query@develop#egg=mwe-query
     # via -r requirements.in
 alpino-query==2.1.9
     # via

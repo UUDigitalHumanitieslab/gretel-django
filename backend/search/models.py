@@ -6,11 +6,13 @@ from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
 from timeit import default_timer as timer
+from copy import deepcopy
 import logging
 import pathlib
 import re
 from datetime import timedelta
 from typing import List
+from lxml import etree
 
 from treebanks.models import Component
 from services.basex import basex
@@ -126,7 +128,7 @@ class ComponentSearchResult(models.Model):
                     # We can still add, so perform a search on this database
                     try:
                         query = generate_xquery_search(
-                            database, self.xpath, self.variables
+                            database, self.xpath
                         )
                         result = basex.perform_query(query)
                     except (OSError, UnicodeDecodeError, ValueError) as err:
@@ -347,6 +349,7 @@ class SearchQuery(models.Model):
 
         self.last_accessed = timezone.now()
         self.save()
+        all_matches = self.augment_with_variables(all_matches)
         return (all_matches, search_percentage, counts, continue_from)
 
     def perform_search(self) -> None:
@@ -411,3 +414,39 @@ class SearchQuery(models.Model):
         """Mark search as cancelled and save object"""
         self.cancelled = True
         self.save()
+
+    def augment_with_variables(self, matches):
+        # register missing xpath lower-case() function for lxml
+        ns = etree.FunctionNamespace(None)
+        ns['lower-case'] = lambda ctx, lst: [x.lower() for x in lst]
+
+        for m in matches:
+            # stores all nodes (root and variables) on which we run xpaths
+            # this is using the old notation from the original basex query
+            nodes = dict()
+            nodes['$node'] = etree.fromstring(m['xml_sentences'])
+
+            vars = []
+            for var in self.variables:
+                if var['name'] in nodes:
+                    continue
+
+                try:
+                    target_name, query = var['path'].split('/', 1)
+                    target = nodes[target_name]
+                    node = target.xpath(query)[0]
+                except KeyError:
+                    # skip missing variables
+                    continue
+
+                # save result for subsequent queries
+                nodes[var['name']] = deepcopy(node)
+
+                # transform result into a <var/> element
+                node.attrib['name'] = var['name']
+                node.tag = 'var'
+
+                vars.append(etree.tostring(node).decode())
+            vars = ''.join(vars)
+            m['variables'] = f'<vars>{vars}</vars>'
+        return matches
