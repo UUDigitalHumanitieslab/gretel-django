@@ -18,11 +18,11 @@ from .basex_search import (
     parse_metadata_count_result
 )
 from .tasks import run_search_query
+from .types import ResultSet
 from services.basex import basex
 
 from sastadev.treebankfunctions import indextransform
 from mwe_query.lcat import expandnonheadwords
-from lxml import etree
 
 import logging
 
@@ -104,29 +104,15 @@ def _get_or_create_components(component_slugs, treebank):
                                     treebank__slug=treebank)
 
 
-def filter_subset_results(results, xpath, should_expand_index):
-    out = []
+def filter_include(results: ResultSet, xpath: str) -> ResultSet:
     for result in results:
-        # important: we have to use lxml.etree and not Python's builtin ElementTree
-        sentence = etree.fromstring(result['xml_sentences'])
-        expanded = sentence
-        if should_expand_index:
-            try:
-                expanded = indextransform(expandnonheadwords(sentence))
-            except Exception:
-                log.exception('Failed expanding index nodes for sentence')
-
-        if expanded.xpath(xpath):
-            out.append(result)
-
-    counts = Counter([result['component'] for result in out])
-    return out, counts
+        if result.tree.xpath(xpath):
+            yield result
 
 
-def filter_exclusions(results, exclusion_xpaths):
+def filter_exclude(results: ResultSet, xpath: str) -> ResultSet:
     for result in results:
-        sentence = etree.fromstring(result['xml_sentences'])
-        if any(sentence.xpath(xpath) for xpath in exclusion_xpaths):
+        if result.tree.xpath(xpath):
             continue
         else:
             yield result
@@ -208,17 +194,28 @@ def search_view(request):
     results, percentage, counts, continue_from = \
         query.get_results(start_from, maximum_results)
 
-    if use_superset:
-        results, subset_counter = filter_subset_results(results,
-                                                        subset_xpath,
-                                                        should_expand_index)
-        # The variable `counts' holds at this moment information relevant for
-        # the superset query. We have to modify the hit counts to what the subset
-        # filter came up with:
-        for entry in counts:
-            entry['number_of_results'] = subset_counter[entry['component']]
+    # expand result trees
+    if should_expand_index:
+        for result in results:
+            try:
+                result.tree = indextransform(expandnonheadwords(result.tree))
+            except Exception:
+                log.exception('Failed expanding index nodes for sentence')
 
-    results = filter_exclusions(results, behaviour.get('exclusions', []))
+    if use_superset:
+        results = filter_include(results, subset_xpath)
+
+    for exclusion_xpath in behaviour.get('exclusions', []):
+        results = filter_exclude(results, exclusion_xpath)
+
+    # serialize results
+    results = [result.as_dict() for result in results]
+    # count actual results (that passed all filters)
+    counter = Counter([result['component'] for result in results])
+
+    # Modify the hit counts to what the (optional) filters came up with:
+    for entry in counts:
+        entry['number_of_results'] = counter[entry['component']]
 
     if request.accepted_renderer.format == 'api':
         # If using the API view, only show part of the results, because
