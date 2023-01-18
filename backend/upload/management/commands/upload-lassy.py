@@ -53,6 +53,11 @@ class Command(BaseCommand):
                  'in GrETEL according to a CSV file',
             default=None
         )
+        parser.add_argument(
+            '--defaults',
+            help='answer the defaults to any interactive questions',
+            action='store_true'
+        )
 
     class InputError(RuntimeError):
         pass
@@ -127,6 +132,14 @@ class Command(BaseCommand):
         """
         if not self.group_by:
             return filename
+        if self.group_by == 'twnc':
+            # Special case for TWNC corpus: component name is newspaper
+            # name and year; filenames are like volkskrant20050726.data.dz
+            match = re.match(r"(^[a-z]*....)(.*)", filename)
+            if match:
+                return match.groups()[0]
+            else:
+                return 'anonymous-component'
         if self.group_by.isnumeric():
             # The prefix consists of the first given number of characters
             # (entered as <number>)
@@ -176,7 +189,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(
                 'Treebank {} already exists.'.format(treebank_slug)
             ))
-            if userinputyesno(
+            if self.use_defaults or userinputyesno(
                 'Delete existing treebank? This will also delete the '
                 'associated databases from BaseX.', True
             ):
@@ -199,7 +212,9 @@ class Command(BaseCommand):
                 '{} BaseX databases with prefix {} already exist.'
                 .format(len(current_dbs), treebank_name)
             ))
-            if userinputyesno('Delete them? (they may be overwritten!)', True):
+            if self.use_defaults or userinputyesno(
+                'Delete them? (they may be overwritten!)', True
+            ):
                 for db in current_dbs:
                     try:
                         basex.execute('DROP DB {}'.format(db))
@@ -235,6 +250,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.group_by = options['group_by']
         self.input_dir = options['input_dir']
+        self.use_defaults = options['defaults']
 
         # Load list of user-friendly components names, if given
         if options['components_names']:
@@ -268,7 +284,7 @@ class Command(BaseCommand):
         # Use the directory name as the title of the treebank
         treebank_title = os.path.basename(self.input_dir)
         # Prefix for BaseX databases
-        treebank_db = treebank_title.upper() + '_ID'
+        treebank_db = 'GRETEL5_' + treebank_title.upper() + '_ID'
 
         # Create treebank in database
         treebank_slug = slugify(treebank_title)

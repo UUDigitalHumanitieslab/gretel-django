@@ -32,6 +32,21 @@ class Treebank(models.Model):
     def __str__(self):
         return '{}'.format(self.slug)
 
+    def serialize(self) -> dict:
+        '''Serialize treebank information (including its components and
+        database info) to a dict, ready for export to JSON'''
+        configuration = {
+            'slug': self.slug,
+            'title': self.title,
+            'variants': self.variants,
+            'groups': self.groups,
+            'metadata': self.metadata,
+            'components': []
+        }
+        for component in self.components.all():
+            configuration['components'].append(component.serialize())
+        return configuration
+
 
 class Component(models.Model):
     slug = models.SlugField(max_length=200)
@@ -61,6 +76,24 @@ class Component(models.Model):
         '''Return a dictionary of all BaseX databases (keys) and their
         sizes in KiB (values)'''
         return {db['dbname']: db['size'] for db in self.databases.values()}
+
+    def serialize(self):
+        '''Serialize component information (including its database info) to
+        a dict, ready for export to JSON. This function is usually called
+        by its parent Treebank object.'''
+        databases = list(self.databases.values_list('dbname', flat=True))
+        configuration = {
+            'slug': self.slug,
+            'title': self.title,
+            'description': self.description,
+            'variant': self.variant,
+            'group': self.group,
+            'databases': databases
+        }
+        # Number of sentences and number of words are not exported because
+        # they will be determined by the import script by inspecting the
+        # BaseX databases.
+        return configuration
 
     @property
     def total_database_size(self):

@@ -308,8 +308,8 @@ class TreebankUpload(models.Model):
                 comp_obj.nr_sentences = nr_sentences
                 comp_obj.nr_words = nr_words
                 comp_obj.save()
-                dbname = (treebankslug + '_' + componentslug + '_' +
-                          str(db_sequence)).upper()
+                dbname = ('GRETEL5_' + treebankslug + '_' + componentslug +
+                          '_' + str(db_sequence)).upper()
                 basexdb_obj = BaseXDB(dbname)
                 basexdb_objs.append(basexdb_obj)
                 basexdb_obj.component = comp_obj
