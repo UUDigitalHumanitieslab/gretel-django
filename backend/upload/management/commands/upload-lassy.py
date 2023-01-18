@@ -287,7 +287,7 @@ class Command(BaseCommand):
         # Use the directory name as the title of the treebank
         treebank_title = os.path.basename(self.input_dir)
         # Prefix for BaseX databases
-        treebank_db = 'LASSYGR_' + treebank_title.upper() + '_ID'
+        treebank_db = 'GRETEL5_' + treebank_title.upper() + '_ID'
 
         # Create treebank in database
         treebank_slug = slugify(treebank_title)
