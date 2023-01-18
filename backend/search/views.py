@@ -33,7 +33,7 @@ def run_search(query_obj) -> None:
     query_obj.perform_search()
 
 
-def _create_component_on_the_fly(component_slug: str, treebank: str) -> None:
+def _create_component_on_the_fly(component_slug: str, _treebank: str) -> None:
     '''Try to create a component object consisting of one database
     with the same name. Also create Treebank object if it does not yet
     exist.  Creation is meant for compatibility with
@@ -61,7 +61,7 @@ def _create_component_on_the_fly(component_slug: str, treebank: str) -> None:
         # Return without exception -- _get_or_create_components
         # will see that not all components exist
         return
-    treebank, _ = Treebank.objects.get_or_create(slug=treebank)
+    treebank, _ = Treebank.objects.get_or_create(slug=_treebank)
     component = Component(slug=component_slug, title=component_slug,
                           nr_sentences=nr_sentences,
                           nr_words=nr_words)

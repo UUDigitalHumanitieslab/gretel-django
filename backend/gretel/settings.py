@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 
 import os
 from pathlib import Path
+from typing import List
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,7 +27,7 @@ SECRET_KEY = 'kxreeb3bds$oibo7ex#f3bi5r+d(1x5zljo-#ms=i2%ih-!pvn'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS: List[str] = []
 
 
 # Application definition
@@ -175,5 +176,5 @@ MAXIMUM_RESULTS_PER_COMPONENT = 5000
 
 CACHING_DIR = BASE_DIR / 'query_result_cache'
 MAXIMUM_CACHE_SIZE = 256  # Maximum cache size in MiB
-STATICFILES_DIRS = []
+STATICFILES_DIRS: List[str] = []
 PROXY_FRONTEND = None
