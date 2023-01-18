@@ -20,10 +20,6 @@ def userinputyesno(prompt, default=False):
     else:
         default_view = ' [y/N]'
     sys.stderr.write(prompt + default_view + '\n')
-    global use_defaults
-    if use_defaults:
-        sys.stderr.write('Default answer given')
-        return default
     answer = input()
     if answer[:1].lower() == 'y':
         return True
@@ -193,7 +189,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(
                 'Treebank {} already exists.'.format(treebank_slug)
             ))
-            if userinputyesno(
+            if self.use_defaults or userinputyesno(
                 'Delete existing treebank? This will also delete the '
                 'associated databases from BaseX.', True
             ):
@@ -216,7 +212,9 @@ class Command(BaseCommand):
                 '{} BaseX databases with prefix {} already exist.'
                 .format(len(current_dbs), treebank_name)
             ))
-            if userinputyesno('Delete them? (they may be overwritten!)', True):
+            if self.use_defaults or userinputyesno(
+                'Delete them? (they may be overwritten!)', True
+            ):
                 for db in current_dbs:
                     try:
                         basex.execute('DROP DB {}'.format(db))
@@ -252,8 +250,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.group_by = options['group_by']
         self.input_dir = options['input_dir']
-        global use_defaults
-        use_defaults = options['defaults']
+        self.use_defaults = options['defaults']
 
         # Load list of user-friendly components names, if given
         if options['components_names']:
