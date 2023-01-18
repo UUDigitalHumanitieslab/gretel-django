@@ -14,7 +14,6 @@ class BaseXMatch:
     begins: str
     xml_sentences: str
     meta: str
-    variables: str
     component: str
     database: str
 
@@ -22,10 +21,12 @@ class BaseXMatch:
 class Result:
     _match: BaseXMatch
     _tree: Optional[etree.ElementTree]
+    _variables: str
 
     def __init__(self, match: BaseXMatch):
         self._match = match
         self._tree = None
+        self._variables = ''
 
     def as_dict(self):
         return dict(
@@ -37,7 +38,7 @@ class Result:
             begins=self._match.begins,
             xml_sentences=self._match.xml_sentences,
             meta=self._match.meta,
-            variables=self._match.variables,
+            variables=self._variables,
             component=self._match.component,
             database=self._match.database)
 
@@ -54,6 +55,17 @@ class Result:
         # we want to allow manipulations for the result tree
         # note however that this has no effect on the serialized result (see as_dict())
         self._tree = tree
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @variables.setter
+    def variables(self, variables):
+        # this is set by SearchQuery, but variable resolution could potentially be moved here
+        self._variables = variables
+
+
 
 
 ResultSet = Iterable[Result]

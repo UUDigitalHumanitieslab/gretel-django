@@ -225,7 +225,6 @@ def parse_search_result(result_str: str, component) -> List[Result]:
             begins=begins,
             xml_sentences=xml_sentences,
             meta=meta,
-            variables=variables,
             component=component,
             database=database,
         )))

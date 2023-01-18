@@ -12,6 +12,7 @@ import pathlib
 import re
 from datetime import timedelta
 from typing import List, Tuple, Iterable
+from lxml import etree
 
 from treebanks.models import Component
 from services.basex import basex
@@ -351,7 +352,7 @@ class SearchQuery(models.Model):
 
         self.last_accessed = timezone.now()
         self.save()
-        all_matches = self.augment_with_variables(all_matches)
+        all_matches = list(self.augment_with_variables(all_matches))
         return (all_matches, search_percentage, counts, continue_from)
 
     def perform_search(self) -> None:
@@ -417,7 +418,7 @@ class SearchQuery(models.Model):
         self.cancelled = True
         self.save()
 
-    def augment_with_variables(self, matches):
+    def augment_with_variables(self, matches: ResultSet) -> ResultSet:
         # register missing xpath lower-case() function for lxml
         ns = etree.FunctionNamespace(None)
         ns['lower-case'] = lambda ctx, lst: [x.lower() for x in lst]
@@ -426,7 +427,7 @@ class SearchQuery(models.Model):
             # stores all nodes (root and variables) on which we run xpaths
             # this is using the old notation from the original basex query
             nodes = dict()
-            nodes['$node'] = etree.fromstring(m['xml_sentences'])
+            nodes['$node'] = m.tree
 
             vars = []
             for var in self.variables:
@@ -449,6 +450,6 @@ class SearchQuery(models.Model):
                 node.tag = 'var'
 
                 vars.append(etree.tostring(node).decode())
-            vars = ''.join(vars)
-            m['variables'] = f'<vars>{vars}</vars>'
+            vars_str = ''.join(vars)
+            m.variables = f'<vars>{vars_str}</vars>'
         return matches
