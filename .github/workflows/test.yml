@@ -58,6 +58,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Type checking with mypy
       run: |
+        source .venv/bin/activate
         cd backend
         pip install django-stubs[compatible-mypy]
         pip install djangorestframework-stubs
