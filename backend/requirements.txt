@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
--e git+https://github.com/UUDigitalHumanitieslab/mwe-query@develop#egg=mwe-query
+-e git+https://github.com/UUDigitalHumanitieslab/mwe-query@bugfix/tests#egg=mwe-query
     # via -r requirements.in
 alpino-query==2.1.9
     # via
@@ -166,6 +166,8 @@ requests==2.28.1
     #   folia
     #   mwe-query
     #   spacy
+sastadev==0.0.3
+    # via mwe-query
 six==1.16.0
     # via
     #   click-repl
