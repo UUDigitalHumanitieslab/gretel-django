@@ -65,7 +65,9 @@ class Result:
         # this is set by SearchQuery, but variable resolution could potentially be moved here
         self._variables = variables
 
-
+    def __eq__(self, other):
+        # used for testing purposes
+        return self._match == other._match
 
 
 ResultSet = Iterable[Result]

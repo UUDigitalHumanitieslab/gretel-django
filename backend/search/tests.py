@@ -137,7 +137,7 @@ class BaseXSearchTestCase(TestCase):
             'xml_sentences||meta||vars||db</match><match>id2||sentence2' \
             '||prevs||nexts||ids2||begins2' \
             '||xml_sentences2||meta2||vars||db</match>'
-        res = parse_search_result(input_str, 'component')
+        res = [r.as_dict() for r in parse_search_result(input_str, 'component')]
         self.assertEqual('sentence', res[0]['sentence'])
         self.assertEqual('meta2', res[1]['meta'])
         # Incomplete input string should raise exception
