@@ -1,4 +1,5 @@
 import logging
+from typing import List, TypedDict
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -10,7 +11,6 @@ from mwe_query.canonicalform import generatequeries
 from .models import CanonicalForm, XPathQuery
 from .serializers import CanonicalFormSerializer, XPathQuerySerializer, MweQuerySerializer
 
-
 log = logging.getLogger(__name__)
 
 
@@ -19,7 +19,13 @@ class CanonicalFormList(ListAPIView):
     serializer_class = CanonicalFormSerializer
 
 
-def generate_queries(sentence):
+class MWEQuery(TypedDict):
+    xpath: str
+    description: str
+    rank: int
+
+
+def generate_queries(sentence: str) -> List[MWEQuery]:
     """ Generates a set of queries using the mwe-query package.
     (https://github.com/UUDigitalHumanitieslab/mwe-query)
 
@@ -39,9 +45,9 @@ def generate_queries(sentence):
     generated = generatequeries(sentence)
     assert len(generated) == 3
     return [
-        dict(xpath=generated[0], description='Multi-word expression query', rank=1),
-        dict(xpath=generated[1], description='Near-miss query', rank=2),
-        dict(xpath=generated[2], description='Superset query', rank=3),
+        MWEQuery(xpath=generated[0], description='Multi-word expression query', rank=1),
+        MWEQuery(xpath=generated[1], description='Near-miss query', rank=2),
+        MWEQuery(xpath=generated[2], description='Superset query', rank=3),
     ]
 
 
