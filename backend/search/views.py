@@ -1,3 +1,5 @@
+from collections import Counter
+
 from rest_framework.response import Response
 from rest_framework.decorators import (
     api_view, parser_classes, renderer_classes, authentication_classes
@@ -16,11 +18,11 @@ from .basex_search import (
     parse_metadata_count_result
 )
 from .tasks import run_search_query
+from .types import ResultSet
 from services.basex import basex
 
-from mwe_query import expand_index_nodes
-from lxml import etree
-import xml.etree.ElementTree as ET
+from sastadev.treebankfunctions import indextransform
+from mwe_query.lcat import expandnonheadwords
 
 import logging
 
@@ -31,7 +33,7 @@ def run_search(query_obj) -> None:
     query_obj.perform_search()
 
 
-def _create_component_on_the_fly(component_slug: str, treebank: str) -> None:
+def _create_component_on_the_fly(component_slug: str, _treebank: str) -> None:
     '''Try to create a component object consisting of one database
     with the same name. Also create Treebank object if it does not yet
     exist.  Creation is meant for compatibility with
@@ -59,7 +61,7 @@ def _create_component_on_the_fly(component_slug: str, treebank: str) -> None:
         # Return without exception -- _get_or_create_components
         # will see that not all components exist
         return
-    treebank, _ = Treebank.objects.get_or_create(slug=treebank)
+    treebank, _ = Treebank.objects.get_or_create(slug=_treebank)
     component = Component(slug=component_slug, title=component_slug,
                           nr_sentences=nr_sentences,
                           nr_words=nr_words)
@@ -102,33 +104,15 @@ def _get_or_create_components(component_slugs, treebank):
                                     treebank__slug=treebank)
 
 
-def filter_subset_results(results, xpath, should_expand_index):
-    out = []
+def filter_include(results: ResultSet, xpath: str) -> ResultSet:
     for result in results:
-        # expand_index_nodes from mwe-query is written using python's ElementTree
-        # library, and at this point in the process we no longer have the tree
-        # in context. So we have to parse it again from an XML string.
-        sentence = ET.fromstring(result['xml_sentences'])
-        expanded = sentence
-        if should_expand_index:
-            try:
-                expanded = expand_index_nodes(sentence)
-            except Exception:
-                log.exception('Failed expanding index nodes for sentence')
-
-        # Some of the XPath queries that we run are not supported by python's ElementTree
-        # so we need to switch over to lxml's etree.
-        converted = etree.fromstring(ET.tostring(expanded))
-        if converted.xpath(xpath):
-            out.append(result)
-
-    return out
+        if result.tree.xpath(xpath):
+            yield result
 
 
-def filter_exclusions(results, exclusion_xpaths):
+def filter_exclude(results: ResultSet, xpath: str) -> ResultSet:
     for result in results:
-        sentence = etree.fromstring(result['xml_sentences'])
-        if any(sentence.xpath(xpath) for xpath in exclusion_xpaths):
+        if result.tree.xpath(xpath):
             continue
         else:
             yield result
@@ -210,12 +194,28 @@ def search_view(request):
     results, percentage, counts, continue_from = \
         query.get_results(start_from, maximum_results)
 
-    if use_superset:
-        results = filter_subset_results(results,
-                                        subset_xpath,
-                                        should_expand_index)
+    # expand result trees
+    if should_expand_index:
+        for result in results:
+            try:
+                result.tree = indextransform(expandnonheadwords(result.tree))
+            except Exception:
+                log.exception('Failed expanding index nodes for sentence')
 
-    results = filter_exclusions(results, behaviour.get('exclusions', []))
+    if use_superset:
+        results = filter_include(results, subset_xpath)
+
+    for exclusion_xpath in behaviour.get('exclusions', []):
+        results = filter_exclude(results, exclusion_xpath)
+
+    # serialize results
+    results = [result.as_dict() for result in results]
+    # count actual results (that passed all filters)
+    counter = Counter([result['component'] for result in results])
+
+    # Modify the hit counts to what the (optional) filters came up with:
+    for entry in counts:
+        entry['number_of_results'] = counter[entry['component']]
 
     if request.accepted_renderer.format == 'api':
         # If using the API view, only show part of the results, because

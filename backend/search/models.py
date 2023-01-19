@@ -11,7 +11,7 @@ import logging
 import pathlib
 import re
 from datetime import timedelta
-from typing import List
+from typing import List, Tuple, Iterable
 from lxml import etree
 
 from treebanks.models import Component
@@ -19,6 +19,7 @@ from services.basex import basex
 from .basex_search import (generate_xquery_search,
                            parse_search_result,
                            generate_xquery_count)
+from .types import ResultSet, Result
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class ComponentSearchResult(models.Model):
                 raise SearchError('Could not create caching directory')
         return settings.CACHING_DIR / str(self.id)
 
-    def get_results(self) -> dict:
+    def get_results(self) -> ResultSet:
         """Return results as a dict"""
         cache_filename = str(self._get_cache_path(False))
         try:
@@ -283,15 +284,17 @@ class SearchQuery(models.Model):
         self.results.add(*results)
         self.save()
 
-    def get_results(self, from_number: int = 0, to_number: int = None) \
-            -> (list, float, list):
+    def _component_results(self) -> Iterable[ComponentSearchResult]:
+        return self.results.all().order_by('component')
+
+    def get_results(self, from_number: int = 0, to_number: int = None) -> Tuple[ResultSet, float, List, int]:
         """Get results so far. Object should have been initialized with
         initialize() method but search does not have to be started yet
         with perform_search() method. Return a tuple of the result as
         a list of dictionaries and the percentage of search completion.
         This method saves the object to update last accessed time."""
         completed_part = 0
-        all_matches: List[dict] = []
+        all_matches: List[Result] = []
         counts = []
 
         # In the following code we loop over `self.results` twice:
@@ -299,7 +302,7 @@ class SearchQuery(models.Model):
         # the desired amount of matches is reached.
 
         if to_number is None or to_number > from_number:
-            for result_obj in self.results.all().order_by('component'):
+            for result_obj in self._component_results():
                 if not result_obj.search_completed:
                     # If result is empty or partially complete, stop adding.
                     # There might still be results in later ComponentSearchResult-s,
@@ -332,7 +335,7 @@ class SearchQuery(models.Model):
                     'percentage': percentage,
                 })
 
-        if self.total_database_size != 0:
+        if self.total_database_size != 0 and self.total_database_size is not None:
             search_percentage = int(
                 100 * completed_part / self.total_database_size
             )
@@ -349,7 +352,7 @@ class SearchQuery(models.Model):
 
         self.last_accessed = timezone.now()
         self.save()
-        all_matches = self.augment_with_variables(all_matches)
+        all_matches = list(self.augment_with_variables(all_matches))
         return (all_matches, search_percentage, counts, continue_from)
 
     def perform_search(self) -> None:
@@ -415,7 +418,7 @@ class SearchQuery(models.Model):
         self.cancelled = True
         self.save()
 
-    def augment_with_variables(self, matches):
+    def augment_with_variables(self, matches: ResultSet) -> ResultSet:
         # register missing xpath lower-case() function for lxml
         ns = etree.FunctionNamespace(None)
         ns['lower-case'] = lambda ctx, lst: [x.lower() for x in lst]
@@ -424,7 +427,7 @@ class SearchQuery(models.Model):
             # stores all nodes (root and variables) on which we run xpaths
             # this is using the old notation from the original basex query
             nodes = dict()
-            nodes['$node'] = etree.fromstring(m['xml_sentences'])
+            nodes['$node'] = m.tree
 
             vars = []
             for var in self.variables:
@@ -447,6 +450,6 @@ class SearchQuery(models.Model):
                 node.tag = 'var'
 
                 vars.append(etree.tostring(node).decode())
-            vars = ''.join(vars)
-            m['variables'] = f'<vars>{vars}</vars>'
+            vars_str = ''.join(vars)
+            m.variables = f'<vars>{vars_str}</vars>'
         return matches
