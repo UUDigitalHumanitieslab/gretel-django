@@ -19,7 +19,7 @@ from services.basex import basex
 from .basex_search import (generate_xquery_search,
                            parse_search_result,
                            generate_xquery_count)
-from .types import ResultSet, Result
+from .types import ResultSet, Result, ResultSetFilter
 
 logger = logging.getLogger(__name__)
 
@@ -261,6 +261,14 @@ class SearchQuery(models.Model):
     )
     last_accessed = models.DateTimeField(null=True, editable=False)
 
+    # makes it possible to register extra filters (callback functions)
+    # to further process the raw XPath results from BaseX
+    filters: List[ResultSetFilter]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.filters = []
+
     def initialize(self) -> None:
         """Initialize search query after entering XPath and list of
         components by calculating total database size and creating
@@ -286,6 +294,17 @@ class SearchQuery(models.Model):
 
     def _component_results(self) -> Iterable[ComponentSearchResult]:
         return self.results.all().order_by('component')
+
+    def _count_results(self, result: ComponentSearchResult) -> int:
+        if not self.filters:
+            # fast path, no furether filtering necessary
+            return result.number_of_results
+
+        # slow path, iterate over all results and run filters
+        matches = result.get_results()
+        for filter_ in self.filters:
+            matches = filter_(matches)
+        return len(list(matches))
 
     def get_results(self, from_number: int = 0, to_number: Optional[int] = None) -> Tuple[ResultSet, float, List, int]:
         """Get results so far. Object should have been initialized with
@@ -315,6 +334,8 @@ class SearchQuery(models.Model):
 
                 # Add matches to list
                 matches = result_obj.get_results()
+                for filter_ in self.filters:
+                    matches = filter_(matches)
                 all_matches.extend(matches)
                 if to_number is not None and len(all_matches) > to_number:
                     break
@@ -330,7 +351,7 @@ class SearchQuery(models.Model):
                     max(1, result_obj.component.total_database_size * 100)
                 counts.append({
                     'component': result_obj.component.slug,
-                    'number_of_results': result_obj.number_of_results,
+                    'number_of_results': self._count_results(result_obj),
                     'completed': result_obj.search_completed is not None,
                     'percentage': percentage,
                 })
@@ -453,3 +474,6 @@ class SearchQuery(models.Model):
             vars_str = ''.join(vars)
             m.variables = f'<vars>{vars_str}</vars>'
         return matches
+
+    def add_filter(self, filter_: ResultSetFilter):
+        self.filters.append(filter_)
