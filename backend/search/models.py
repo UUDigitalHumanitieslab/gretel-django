@@ -295,7 +295,7 @@ class SearchQuery(models.Model):
     def _component_results(self) -> Iterable[ComponentSearchResult]:
         return self.results.all().order_by('component')
 
-    def _count_results(self, result: ComponentSearchResult) -> int:
+    def _count_results(self, result: ComponentSearchResult) -> Optional[int]:
         if not self.filters:
             # fast path, no furether filtering necessary
             return result.number_of_results
