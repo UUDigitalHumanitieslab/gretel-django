@@ -327,7 +327,7 @@ class SearchQuery(models.Model):
             if result_obj.completed_part is not None:
                 completed_part += result_obj.completed_part
                 percentage = result_obj.completed_part / \
-                    result_obj.component.total_database_size * 100
+                    max(1, result_obj.component.total_database_size * 100)
                 counts.append({
                     'component': result_obj.component.slug,
                     'number_of_results': result_obj.number_of_results,
@@ -337,7 +337,7 @@ class SearchQuery(models.Model):
 
         if self.total_database_size != 0 and self.total_database_size is not None:
             search_percentage = int(
-                100 * completed_part / self.total_database_size
+                100 * completed_part / max(1, self.total_database_size)
             )
         else:
             search_percentage = 100
