@@ -11,7 +11,7 @@ import logging
 import pathlib
 import re
 from datetime import timedelta
-from typing import List, Tuple, Iterable
+from typing import List, Tuple, Iterable, Optional
 from lxml import etree
 
 from treebanks.models import Component
@@ -287,7 +287,7 @@ class SearchQuery(models.Model):
     def _component_results(self) -> Iterable[ComponentSearchResult]:
         return self.results.all().order_by('component')
 
-    def get_results(self, from_number: int = 0, to_number: int = None) -> Tuple[ResultSet, float, List, int]:
+    def get_results(self, from_number: int = 0, to_number: Optional[int] = None) -> Tuple[ResultSet, float, List, int]:
         """Get results so far. Object should have been initialized with
         initialize() method but search does not have to be started yet
         with perform_search() method. Return a tuple of the result as
