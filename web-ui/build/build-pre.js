@@ -35,7 +35,20 @@ async function getRemoteUrl() {
                 return;
             }
 
-            resolve(stdout.replace(/([^:\/]+:[^:@]+@|\.git\/?\n?$)/g, '').trim());
+            // format is either:
+            // git@github.com:UUDigitalHumanitieslab/gretel.git
+            // or https://github.com/UUDigitalHumanitieslab/gretel.git
+            // or https://USERNAME:SECRET@github.com/UUDigitalHumanitieslab/gretel.git/
+
+            // remove https://
+            let sourceUrl = stdout.replace(/^https?:\/\//, '').trim();
+            // remove git@ or USERNAME:SECRET@
+            sourceUrl = sourceUrl.replace(/^[^@]+@/, '').trim();
+            // replace : with /
+            sourceUrl = sourceUrl.replace(':', '/');
+            // remove .git/
+            sourceUrl = sourceUrl.replace(/\.git\/?\n?$/, '');
+            resolve('https://' + sourceUrl);
         });
     });
 }
