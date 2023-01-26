@@ -306,7 +306,7 @@ class SearchQuery(models.Model):
             matches = filter_(matches)
         return len(list(matches))
 
-    def get_results(self, from_number: int = 0, to_number: Optional[int] = None) -> Tuple[ResultSet, float, List, int]:
+    def get_results(self, from_number: int = 0, to_number: Optional[int] = None) -> Tuple[ResultSet, float, List]:
         """Get results so far. Object should have been initialized with
         initialize() method but search does not have to be started yet
         with perform_search() method. Return a tuple of the result as
@@ -363,7 +363,6 @@ class SearchQuery(models.Model):
         else:
             search_percentage = 100
 
-        continue_from = len(all_matches)
         # Skip results that were already returned
         all_matches = all_matches[from_number:]
 
@@ -374,7 +373,7 @@ class SearchQuery(models.Model):
         self.last_accessed = timezone.now()
         self.save()
         all_matches = list(self.augment_with_variables(all_matches))
-        return (all_matches, search_percentage, counts, continue_from)
+        return (all_matches, search_percentage, counts)
 
     def perform_search(self) -> None:
         """Perform search and regularly update on progress"""
