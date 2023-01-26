@@ -210,7 +210,7 @@ def search_view(request):
             run_search_query.apply((query.pk,))
 
     # Get results so far, if any
-    results, percentage, counts, continue_from = \
+    results, percentage, counts = \
         query.get_results(start_from, maximum_results)
 
     # serialize results
@@ -227,7 +227,6 @@ def search_view(request):
         'search_percentage': percentage,
         'results': results,
         'counts': counts,
-        'continue_from': continue_from
     }
     if percentage == 100:
         response['errors'] = query.get_errors()
