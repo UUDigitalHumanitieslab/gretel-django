@@ -1,4 +1,5 @@
 from collections import Counter
+from functools import partial
 
 from rest_framework.response import Response
 from rest_framework.decorators import (
@@ -104,13 +105,22 @@ def _get_or_create_components(component_slugs, treebank):
                                     treebank__slug=treebank)
 
 
-def filter_include(results: ResultSet, xpath: str) -> ResultSet:
+def filter_expand(results: ResultSet) -> ResultSet:
+    for result in results:
+        try:
+            result.tree = indextransform(expandnonheadwords(result.tree))
+        except Exception:
+            log.exception('Failed expanding index nodes for sentence')
+        yield result
+
+
+def filter_include(xpath: str, results: ResultSet) -> ResultSet:
     for result in results:
         if result.tree.xpath(xpath):
             yield result
 
 
-def filter_exclude(results: ResultSet, xpath: str) -> ResultSet:
+def filter_exclude(xpath: str, results: ResultSet) -> ResultSet:
     for result in results:
         if result.tree.xpath(xpath):
             continue
@@ -183,6 +193,15 @@ def search_view(request):
         query.components.add(*component_objects)
         query.initialize()
 
+    if should_expand_index:
+        query.add_filter(filter_expand)
+
+    if use_superset:
+        query.add_filter(partial(filter_include, subset_xpath))
+
+    for exclusion_xpath in behaviour.get('exclusions', []):
+        query.add_filter(partial(filter_exclude, exclusion_xpath))
+
     if new_query:
         try:
             run_search_query.delay(query.pk)
@@ -194,28 +213,8 @@ def search_view(request):
     results, percentage, counts, continue_from = \
         query.get_results(start_from, maximum_results)
 
-    # expand result trees
-    if should_expand_index:
-        for result in results:
-            try:
-                result.tree = indextransform(expandnonheadwords(result.tree))
-            except Exception:
-                log.exception('Failed expanding index nodes for sentence')
-
-    if use_superset:
-        results = filter_include(results, subset_xpath)
-
-    for exclusion_xpath in behaviour.get('exclusions', []):
-        results = filter_exclude(results, exclusion_xpath)
-
     # serialize results
     results = [result.as_dict() for result in results]
-    # count actual results (that passed all filters)
-    counter = Counter([result['component'] for result in results])
-
-    # Modify the hit counts to what the (optional) filters came up with:
-    for entry in counts:
-        entry['number_of_results'] = counter[entry['component']]
 
     if request.accepted_renderer.format == 'api':
         # If using the API view, only show part of the results, because

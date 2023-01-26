@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Callable
 
 from lxml import etree
 
@@ -71,3 +71,4 @@ class Result:
 
 
 ResultSet = Iterable[Result]
+ResultSetFilter = Callable[[ResultSet], ResultSet]
