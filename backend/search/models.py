@@ -117,6 +117,7 @@ class ComponentSearchResult(models.Model):
             raise SearchError('Could not open caching file')
         with resultsfile:
             cancelled = False
+            did_break = False
             # Go through all BaseX databases
             for database in databases_with_size:
                 size = databases_with_size[database]
@@ -131,19 +132,27 @@ class ComponentSearchResult(models.Model):
                         query = generate_xquery_search(
                             database, self.xpath
                         )
-                        result = basex.perform_query(query)
+                        result = basex.perform_query_iter(query)
                     except (OSError, UnicodeDecodeError, ValueError) as err:
                         self.errors += 'Error searching database {}: ' \
                             .format(database) + str(err) + '\n'
-                        result = ''  # No break, keep going
-                    results_for_database = result.count('<match>')
-                    self.number_of_results += results_for_database
-                    if results_for_database > maximum_to_add:
-                        result = self._truncate_results(
-                            result, maximum_to_add
-                        )
-                    resultsfile.write(result)
-                else:
+                        result = []  # No break, keep going
+
+                    results_for_database = 0
+                    for _, entry in result:
+                        if results_for_database > maximum_to_add:
+                            # no need to read the rest of the results,
+                            # but we do need to run a separate count query if we
+                            # want an accurate count
+                            did_break = True
+                            break
+                        results_for_database += 1
+                        resultsfile.write(entry)
+
+                    if not did_break:
+                        self.number_of_results += results_for_database
+
+                if maximum_to_add <= 0 or did_break:
                     # The maximum number of results per component has been
                     # reached. From now on only count the number of results,
                     # which is somewhat faster
