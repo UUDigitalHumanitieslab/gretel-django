@@ -17,7 +17,6 @@ from typing import List
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
@@ -43,9 +42,9 @@ INSTALLED_APPS = [
     'services',
     'treebanks',
     'search',
-    'mwe',
     'upload',
     'parse',
+    'mwe',
     'rest_framework',
     'revproxy',
 ]
@@ -81,7 +80,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gretel.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
@@ -91,7 +89,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -121,8 +118,6 @@ TIME_ZONE = 'Europe/Amsterdam'
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 
@@ -149,6 +144,7 @@ LOGGING = {
         'level': 'DEBUG',
     },
 }
+
 # Celery settings
 CELERY_BROKER_URL = 'redis://' + os.getenv('REDIS_HOST', 'localhost')
 

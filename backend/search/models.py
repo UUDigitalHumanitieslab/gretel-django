@@ -115,67 +115,70 @@ class ComponentSearchResult(models.Model):
             resultsfile = self._get_cache_path(True).open(mode='w')
         except OSError:
             raise SearchError('Could not open caching file')
-        with resultsfile:
-            cancelled = False
-            # Go through all BaseX databases
-            for database in databases_with_size:
-                size = databases_with_size[database]
-                # Check how many results we can still add to the cache file,
-                # respecting the maximum number of results per component
-                maximum_to_add = \
-                    settings.MAXIMUM_RESULTS_PER_COMPONENT - \
-                    self.number_of_results
-                if maximum_to_add > 0:
-                    # We can still add, so perform a search on this database
-                    try:
-                        query = generate_xquery_search(
-                            database, self.xpath
-                        )
-                        result = basex.perform_query(query)
-                    except (OSError, UnicodeDecodeError, ValueError) as err:
-                        self.errors += 'Error searching database {}: ' \
-                            .format(database) + str(err) + '\n'
-                        result = ''  # No break, keep going
-                    results_for_database = result.count('<match>')
-                    self.number_of_results += results_for_database
-                    if results_for_database > maximum_to_add:
-                        result = self._truncate_results(
-                            result, maximum_to_add
-                        )
-                    resultsfile.write(result)
-                else:
-                    # The maximum number of results per component has been
-                    # reached. From now on only count the number of results,
-                    # which is somewhat faster
-                    query = generate_xquery_count(database, self.xpath)
-                    try:
-                        count = int(basex.perform_query(query))
-                    except (OSError, UnicodeDecodeError, ValueError) as err:
-                        self.errors += 'Error searching database {}: ' \
-                            .format(database) + str(err) + '\n'
-                        count = 0
-                    self.number_of_results += count
-                self.completed_part += size
-                if timer() > next_save_time:
-                    # Save the model once a second, so that the frontend can
-                    # be updated about the progress regularly even in case
-                    # of large components. Note that the cache file (results,
-                    # written out live), and the model values (number of
-                    # results and others) get out of sync here, so one should
-                    # keep that into account.
-                    self.save()
-                    next_save_time = timer() + 1
-                    # Also check if the search query has been cancelled.
-                    # There is no relation between the SearchQuery object
-                    # and the ComponentSearchResult, but when this method
-                    # is called the query id is given as a method parameter
-                    if query_id is not None and \
-                            self._was_query_cancelled(query_id):
-                        cancelled = True
-                        break
-        self.cache_size = self._get_cache_path(False).stat().st_size
-        if not cancelled:
-            self.search_completed = timezone.now()
+        try:
+            with resultsfile:
+                cancelled = False
+                # Go through all BaseX databases
+                for database in databases_with_size:
+                    size = databases_with_size[database]
+                    # Check how many results we can still add to the cache file,
+                    # respecting the maximum number of results per component
+                    maximum_to_add = \
+                        settings.MAXIMUM_RESULTS_PER_COMPONENT - \
+                        self.number_of_results
+                    if maximum_to_add > 0:
+                        # We can still add, so perform a search on this database
+                        try:
+                            query = generate_xquery_search(
+                                database, self.xpath
+                            )
+                            result = basex.perform_query(query)
+                        except (OSError, UnicodeDecodeError, ValueError) as err:
+                            self.errors += 'Error searching database {}: ' \
+                                .format(database) + str(err) + '\n'
+                            result = ''  # No break, keep going
+                        results_for_database = result.count('<match>')
+                        self.number_of_results += results_for_database
+                        if results_for_database > maximum_to_add:
+                            result = self._truncate_results(
+                                result, maximum_to_add
+                            )
+                        resultsfile.write(result)
+                    else:
+                        # The maximum number of results per component has been
+                        # reached. From now on only count the number of results,
+                        # which is somewhat faster
+                        query = generate_xquery_count(database, self.xpath)
+                        try:
+                            count = int(basex.perform_query(query))
+                        except (OSError, UnicodeDecodeError, ValueError) as err:
+                            self.errors += 'Error searching database {}: ' \
+                                .format(database) + str(err) + '\n'
+                            count = 0
+                        self.number_of_results += count
+                    self.completed_part += size
+                    if timer() > next_save_time:
+                        # Save the model once a second, so that the frontend can
+                        # be updated about the progress regularly even in case
+                        # of large components. Note that the cache file (results,
+                        # written out live), and the model values (number of
+                        # results and others) get out of sync here, so one should
+                        # keep that into account.
+                        self.save()
+                        next_save_time = timer() + 1
+                        # Also check if the search query has been cancelled.
+                        # There is no relation between the SearchQuery object
+                        # and the ComponentSearchResult, but when this method
+                        # is called the query id is given as a method parameter
+                        if query_id is not None and \
+                                self._was_query_cancelled(query_id):
+                            cancelled = True
+                            break
+            self.cache_size = self._get_cache_path(False).stat().st_size
+            if not cancelled:
+                self.search_completed = timezone.now()
+        except Exception as err:
+            self.errors += f'Error searching: ${err}\n'
         self.last_accessed = timezone.now()
         self.save()
 
@@ -377,7 +380,6 @@ class SearchQuery(models.Model):
 
     def perform_search(self) -> None:
         """Perform search and regularly update on progress"""
-
         # Get result objects for this query, but only those that have not
         # completed yet, and starting with those that have not started yet
         # (because those for which search has already started may finish

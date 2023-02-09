@@ -14,7 +14,7 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '::1']
 
-STATICFILES_DIRS = [op.join(here, 'frontend', 'dist')]
+STATICFILES_DIRS = [op.join(here, 'web-ui', 'dist')]
 
 STATIC_ROOT = op.join(here, 'static')
 
