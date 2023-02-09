@@ -117,7 +117,7 @@ def prepare_cwd():
 def prepare_virtualenv():
     default_env = '.env'
     env_path = prompt('virtualenv', default_env)
-    default_cmd = 'virtualenv {} --prompt="({}) "'.format(env_path, SLUG)
+    default_cmd = 'virtualenv {} --prompt="{}"'.format(env_path, SLUG)
     env_cmd = prompt('virtualenv_command', default_cmd)
     create_command = make_create_venv_command(env_cmd)
     activate_command = make_activate_venv_command(env_path)
@@ -179,7 +179,7 @@ def merge_json(target, source):
     return target
 
 def modify_angular_json():
-    with open('frontend/angular.json', 'r') as file:
+    with open('web-ui/angular.json', 'r') as file:
         data = json.load(file)
     try:
         project = 'gretel5'.replace('_', '-')
@@ -206,7 +206,7 @@ def modify_angular_json():
         print("Oh no! :( Maybe the format changed?")
         print(json.dumps(data, indent=4))
         raise
-    with open('frontend/angular.json', 'w') as file:
+    with open('web-ui/angular.json', 'w') as file:
         json.dump(data, file, indent=4)
 
 def activate_frontend():
@@ -258,7 +258,7 @@ def activate_frontend():
         )()
         for lang in 'en:english,nl:dutch'.split(','):
             [code, lang_name] = lang.split(':')
-            shutil.copyfile('frontend/locale/messages.xlf', f'frontend/locale/messages.{code}.xlf')
+            shutil.copyfile('web-ui/locale/messages.xlf', f'web-ui/locale/messages.{code}.xlf')
         if '4200' != '4200':
             Command(
                 'Set frontend port',
@@ -274,16 +274,16 @@ def activate_frontend():
         os.remove(path)
 
 def override_package_json():
-    if os.path.isfile('frontend/package.overwrite.json'):
+    if os.path.isfile('web-ui/package.overwrite.json'):
         print('Overriding package.json')
-        with open('frontend/package.overwrite.json', 'r') as file:
+        with open('web-ui/package.overwrite.json', 'r') as file:
             overwrite = json.load(file)
-        with open('frontend/package.json', 'r') as file:
+        with open('web-ui/package.json', 'r') as file:
             data = json.load(file)
-        with open('frontend/package.json', 'w') as file:
+        with open('web-ui/package.json', 'w') as file:
             merge_json(data, overwrite)
             json.dump(data, file, indent=4)
-        os.remove('frontend/package.overwrite.json')
+        os.remove('web-ui/package.overwrite.json')
 
 install_pip_tools = Command(
     'Install pip-tools',

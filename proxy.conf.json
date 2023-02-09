@@ -1,4 +1,8 @@
 {
+    "/gretel-upload": {
+        "target": "http://localhost/",
+        "secure": false
+    },
     "/api": {
         "target": "http://localhost:8000",
         "secure": false
@@ -12,15 +16,15 @@
         "secure": false
     },
     "/mwe/": {
-	"target": "http://localhost:8000/",
+        "target": "http://localhost:8000/",
         "secure": false
     },
     "/search/": {
-	"target": "http://localhost:8000/",
+        "target": "http://localhost:8000/",
         "secure": false
     },
     "/treebanks/": {
-	"target": "http://localhost:8000/",
+        "target": "http://localhost:8000/",
         "secure": false
-    },
+    }
 }

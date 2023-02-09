@@ -38,6 +38,6 @@ from settings import *
 # Expose assets from static, everything else will be proxied to
 # the Angular frontend server
 STATICFILES_DIRS += [
-    op.join(here, 'frontend', 'src')
+    op.join(here, 'web-ui', 'src')
 ]
 PROXY_FRONTEND = "http://localhost:4200"
