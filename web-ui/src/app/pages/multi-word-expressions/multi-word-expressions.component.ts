@@ -30,7 +30,8 @@ class MweResultsStep extends ResultsStep<MweState> {
 
         try {
             state.querySet = await this.mweService.generateQuery(state.canonicalForm.text);
-            state.currentQuery = state.querySet[0];
+            let rank = state.currentQuery?.rank ?? 1;
+            state.currentQuery = state.querySet[rank - 1];
             state.xpath = state.currentQuery.xpath;
 
             state.valid = true;
@@ -99,8 +100,9 @@ export class MultiWordExpressionsComponent extends MultiStepPageDirective<MweSta
     encodeGlobalState(state: MweState) {
         return Object.assign(super.encodeGlobalState(state), {
             'canonicalForm': JSON.stringify(state.canonicalForm),
-            'currentQuery': JSON.stringify(state.currentQuery),
-            'xpath': state.xpath
+            'currentQuery': JSON.stringify({rank:state.currentQuery.rank, description:state.currentQuery.description}),
+            // clear the xpath expression in the URL to save space (see GH issue #47)
+            'xpath': '',
         });
     }
 
@@ -109,7 +111,6 @@ export class MultiWordExpressionsComponent extends MultiStepPageDirective<MweSta
             selectedTreebanks: new TreebankSelection(
                 this.treebankService,
                 queryParams.selectedTreebanks ? JSON.parse(queryParams.selectedTreebanks) : undefined),
-            xpath: queryParams.xpath || this.defaultGlobalState.xpath,
             canonicalForm: JSON.parse(queryParams.canonicalForm ?? '{}'),
             currentQuery: JSON.parse(queryParams.currentQuery ?? '{}'),
             valid: true
