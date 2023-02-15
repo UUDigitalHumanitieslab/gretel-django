@@ -106,6 +106,7 @@ class ComponentSearchResult(models.Model):
         databases_with_size = self.component.get_databases()
         # Initialize variables
         self.results = ''
+        self.errors = ''
         self.completed_part = 0
         self.number_of_results = 0
         start_time = timer()
@@ -383,15 +384,18 @@ class SearchQuery(models.Model):
         # (because those for which search has already started may finish
         # early).
         result_objs = self.results \
-            .filter(search_completed__isnull=True) \
-            .order_by(F('completed_part').desc(nulls_first=True),
-                      'component__slug')
+            .filter(search_completed__isnull=True)
+        # add failed result objects (with errors and no results)
+        result_objs |= self.results.filter(number_of_results=0).exclude(errors=None).exclude(errors='')
+
+        result_objs = result_objs.order_by(F('completed_part').desc(nulls_first=True),
+                                           'component__slug')
 
         for result_obj in result_objs:
             # Check if search has been completed by now by a concurrent
             # search. If so, continue
             result_obj.refresh_from_db()
-            if result_obj.search_completed and result_obj.errors == '':
+            if result_obj.search_completed and not result_obj.errors:
                 continue
             try:
                 result_obj.perform_search(self.id)
