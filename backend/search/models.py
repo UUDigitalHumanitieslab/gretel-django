@@ -384,8 +384,9 @@ class SearchQuery(models.Model):
         # (because those for which search has already started may finish
         # early).
         result_objs = self.results \
-            .filter(search_completed__isnull=True) \
-            | self.results.filter(number_of_results=0).exclude(errors=None).exclude(errors='')
+            .filter(search_completed__isnull=True)
+        # add failed result objects (with errors and no results)
+        result_objs |= self.results.filter(number_of_results=0).exclude(errors=None).exclude(errors='')
 
         result_objs = result_objs.order_by(F('completed_part').desc(nulls_first=True),
                                            'component__slug')
