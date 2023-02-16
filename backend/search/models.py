@@ -120,8 +120,6 @@ class ComponentSearchResult(models.Model):
             did_break = False
             # Go through all BaseX databases
             for database in databases_with_size:
-                if cancelled:
-                    break
                 size = databases_with_size[database]
                 # Check how many results we can still add to the cache file,
                 # respecting the maximum number of results per component
@@ -170,6 +168,7 @@ class ComponentSearchResult(models.Model):
                 self.save()
                 if query_id is not None and self._was_query_cancelled(query_id):
                     cancelled = True
+                    break
         self.cache_size = self._get_cache_path(False).stat().st_size
         if not cancelled:
             self.search_completed = timezone.now()
