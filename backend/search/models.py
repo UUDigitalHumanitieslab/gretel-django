@@ -120,6 +120,8 @@ class ComponentSearchResult(models.Model):
             did_break = False
             # Go through all BaseX databases
             for database in databases_with_size:
+                if cancelled:
+                    break
                 size = databases_with_size[database]
                 # Check how many results we can still add to the cache file,
                 # respecting the maximum number of results per component
@@ -165,23 +167,9 @@ class ComponentSearchResult(models.Model):
                         count = 0
                     self.number_of_results += count
                 self.completed_part += size
-                if timer() > next_save_time:
-                    # Save the model once a second, so that the frontend can
-                    # be updated about the progress regularly even in case
-                    # of large components. Note that the cache file (results,
-                    # written out live), and the model values (number of
-                    # results and others) get out of sync here, so one should
-                    # keep that into account.
-                    self.save()
-                    next_save_time = timer() + 1
-                    # Also check if the search query has been cancelled.
-                    # There is no relation between the SearchQuery object
-                    # and the ComponentSearchResult, but when this method
-                    # is called the query id is given as a method parameter
-                    if query_id is not None and \
-                            self._was_query_cancelled(query_id):
-                        cancelled = True
-                        break
+                self.save()
+                if query_id is not None and self._was_query_cancelled(query_id):
+                    cancelled = True
         self.cache_size = self._get_cache_path(False).stat().st_size
         if not cancelled:
             self.search_completed = timezone.now()
