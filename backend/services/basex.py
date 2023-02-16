@@ -15,9 +15,11 @@ class BaseXService:
         return response
 
     def perform_query_iter(self, query):
-        session = self.get_session()
-        yield from session.query(query).iter()
-        session.close()
+        """Open a session if needed and propagate the query iteration
+        of the BaseX client of a given query"""
+        if not self.session:
+            self.session = self.get_session()
+        yield from self.session.query(query).iter()
 
     def execute(self, command):
         """Open a session if needed, execute a command and return the
