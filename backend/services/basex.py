@@ -4,27 +4,29 @@ from django.conf import settings
 
 
 class BaseXService:
+    session: BaseXClient.Session = None
+
     def perform_query(self, query):
-        """Open a session, create a query, execute it, close the session
+        """Open a session if needed, create a query, execute it
         and result the result"""
-        session = self.get_session()
-        response = session.query(query).execute()
-        session.close()
+        if not self.session:
+            self.session = self.get_session()
+        response = self.session.query(query).execute()
         return response
 
     def execute(self, command):
-        """Open a session, execute a command, close the session
-        and return the result"""
-        session = self.get_session()
-        response = session.execute(command)
-        session.close()
+        """Open a session if needed, execute a command and return the
+        result"""
+        if not self.session:
+            self.session = self.get_session()
+        response = self.session.execute(command)
         return response
 
     def create(self, name, content):
-        """Open a session, create a database and close the session"""
-        session = self.get_session()
-        session.create(name, content)
-        session.close()
+        """Open a session if needed and create a database"""
+        if not self.session:
+            self.session = self.get_session()
+        self.session.create(name, content)
 
     def get_session(self):
         session = BaseXClient.Session(
@@ -47,6 +49,10 @@ class BaseXService:
             return False
         session.close()
         return True
+
+    def __del__(self):
+        if self.session is not None:
+            self.session.close()
 
 
 basex = BaseXService()
