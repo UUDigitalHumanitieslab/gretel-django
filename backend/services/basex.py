@@ -14,6 +14,11 @@ class BaseXService:
         response = self.session.query(query).execute()
         return response
 
+    def perform_query_iter(self, query):
+        session = self.get_session()
+        yield from session.query(query).iter()
+        session.close()
+
     def execute(self, command):
         """Open a session if needed, execute a command and return the
         result"""
