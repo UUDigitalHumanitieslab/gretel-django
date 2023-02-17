@@ -3,7 +3,7 @@
   "license": "CC-BY-NC-SA-4.0",
   "scripts": {
     "ng": "ng",
-    "ng-high-memory": "node --max_old_space_size=8192 ./node_modules/@angular/cli/bin/ng",
+    "ng-high-memory": "node --max_old_space_size=2048 ./node_modules/@angular/cli/bin/ng",
     "start": "yarn serve",
     "build": "node ./build/build-pre.js && npm run ng-high-memory -- build --deploy-url='/static/'",
     "test": "ng test --watch=true",
