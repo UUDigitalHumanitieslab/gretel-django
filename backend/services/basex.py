@@ -12,6 +12,11 @@ class BaseXService:
         session.close()
         return response
 
+    def perform_query_iter(self, query):
+        session = self.get_session()
+        yield from session.query(query).iter()
+        session.close()
+
     def execute(self, command):
         """Open a session, execute a command, close the session
         and return the result"""
