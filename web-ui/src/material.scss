@@ -42,3 +42,7 @@ $mat-bulma-theme: mat-light-theme((color: (primary:$primary-palette,
             warn:$warn-palette)));
 
 @include angular-material-theme($mat-bulma-theme);
+
+mat-form-field .mat-mdc-form-field-infix {
+    width: 100%;
+}
