@@ -19,7 +19,7 @@ module.exports = function (config) {
             dir: require('path').join(__dirname, 'coverage'), reports: ['html', 'lcovonly'],
             fixWebpackSourcePaths: true
         },
-        
+
         reporters: ['progress', 'kjhtml'],
         port: 9876,
         colors: true,
@@ -27,16 +27,20 @@ module.exports = function (config) {
         autoWatch: true,
         browsers: ['ChromeHeadless'],
         customLaunchers: {
-            ChromeTravisCi: {
-                base: 'ChromeHeadless',
-                flags: ['--no-sandbox', '--disable-gpu']
+            ChromeHeadless: {
+                base: 'Chrome',
+                flags: [
+                    '--headless',
+                    // Without a remote debugging port, Google Chrome exits immediately.
+                    '--remote-debugging-port=9222',
+                ],
             }
         },
         singleRun: false
     };
 
-    if (process.env.TRAVIS) {
-        configuration.browsers = ['ChromeTravisCi'];
+    if (process.env.CI) {
+        configuration.browsers = ['ChromeHeadless'];
         configuration.singleRun = true;
     }
 
