@@ -369,9 +369,7 @@ class SearchQuery(models.Model):
 
         self.last_accessed = timezone.now()
         self.save()
-        all_matches = list(
-            self.augment_with_context(self.augment_with_variables(all_matches), limit=settings.MAXIMUM_RESULTS_PER_COMPONENT)
-        )
+        all_matches = list(self.augment_with_variables(all_matches))
         return (all_matches, search_percentage, counts)
 
     def perform_search(self) -> None:

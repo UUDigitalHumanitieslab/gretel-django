@@ -27,6 +27,8 @@ class Result:
         self._match = match
         self._tree = None
         self._variables = ''
+        self._prevs = ''
+        self._nexts = ''
 
     def as_dict(self):
         return dict(

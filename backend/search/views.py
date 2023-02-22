@@ -213,6 +213,9 @@ def search_view(request):
     results, percentage, counts = \
         query.get_results(start_from, maximum_results)
 
+    if data.get('retrieveContext'):
+        results = query.augment_with_context(results, limit=settings.MAXIMUM_RESULTS)
+
     # serialize results
     results = [result.as_dict() for result in results]
 
