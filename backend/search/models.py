@@ -369,7 +369,9 @@ class SearchQuery(models.Model):
 
         self.last_accessed = timezone.now()
         self.save()
-        all_matches = list(self.augment_with_variables(all_matches))
+        all_matches = list(
+            self.augment_with_context(self.augment_with_variables(all_matches), limit=settings.MAXIMUM_RESULTS_PER_COMPONENT)
+        )
         return (all_matches, search_percentage, counts)
 
     def perform_search(self) -> None:
@@ -472,6 +474,37 @@ class SearchQuery(models.Model):
                 vars.append(etree.tostring(node).decode())
             vars_str = ''.join(vars)
             m.variables = f'<vars>{vars_str}</vars>'
+        return matches
+
+    def augment_with_context(self, matches: ResultSet, limit: int) -> ResultSet:
+        """Fetch preceding and following sentences for matches in the result set,
+        up to limit results"""
+        i = 0
+        for match in matches:
+            if i > limit:
+                break
+
+            sentid = match._match.sentid
+            if '+match' in sentid:
+                sentid = sentid[:sentid.find('+')]
+
+            # TODO: there's probably a more efficient way to fetch everything in a single query
+            # instead of one query per match
+
+            query = '''
+            let $tree := db:open("''' + match._match.database + '''")/treebank/alpino_ds[
+            @id="''' + sentid + '''"
+            ]
+            let $prevs := $tree/preceding-sibling::alpino_ds[1]/sentence
+            let $nexts := $tree/following-sibling::alpino_ds[1]/sentence
+            return
+            <match>{data($prevs)}||{data($nexts)}</match>
+            '''
+            result = basex.perform_query(query)
+            prevs, nexts = result.split('||')
+            prevs = prevs.replace('<match>', '')
+            nexts = nexts.replace('</match>', '')
+            match.add_context(prevs, nexts)
         return matches
 
     def add_filter(self, filter_: ResultSetFilter):
