@@ -75,10 +75,3 @@ class GenerateMweQueries(APIView):
                 queries[query.rank - 1] = XPathQuerySerializer(query).data
 
         return Response(queries.values())
-
-
-class XPathQueryViewSet(ModelViewSet):
-    serializer_class = XPathQuerySerializer
-
-    def get_queryset(self):
-        return XPathQuery.objects.all()

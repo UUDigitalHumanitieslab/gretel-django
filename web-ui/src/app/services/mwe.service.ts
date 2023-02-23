@@ -51,11 +51,4 @@ export class MweService {
 
         return response;
     }
-
-    async saveCustomQuery(query: MweQuery) : Promise<MweQuery> {
-        if (query.id) {
-            return this.http.put<MweQuery>(await this.saveQueryUrl + query.id + '/', query).toPromise();
-        }
-        return this.http.post<MweQuery>(await this.saveQueryUrl, query).toPromise();
-    }
 }

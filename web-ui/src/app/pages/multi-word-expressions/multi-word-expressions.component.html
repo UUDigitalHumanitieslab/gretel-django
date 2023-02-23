@@ -29,7 +29,6 @@
         [inputSentence]="globalState.inputSentence"
         [retrieveContext]="globalState.retrieveContext"
         [xpath]="globalState.xpath"
-        [canSaveQuery]="globalState.canonicalForm.id !== undefined"
 
         (changeValid)="setValid($event)"
         (changeXpath)="updateXPath($event)"
