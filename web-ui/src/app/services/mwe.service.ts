@@ -28,12 +28,10 @@ export type MweQuerySet = MweQuery[];
 export class MweService {
     canonicalMweUrl: Promise<string>;
     generateMweUrl: Promise<string>;
-    saveQueryUrl: Promise<string>;
 
     constructor(configurationService: ConfigurationService, private http: HttpClient, private parserService: ParserService) {
         this.canonicalMweUrl = configurationService.getDjangoUrl('mwe/canonical');
         this.generateMweUrl = configurationService.getDjangoUrl('mwe/generate');
-        this.saveQueryUrl = configurationService.getDjangoUrl('mwe/xpath/');
     }
 
     async getCanonical() : Promise<MweCanonicalForm[]> {
