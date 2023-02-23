@@ -164,6 +164,7 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
                     corpus.provider,
                     corpus.corpus.name,
                     corpus.corpus.components,
+                    false,
                     true,
                     [],
                     getSearchVariables(variables, variableProperties)

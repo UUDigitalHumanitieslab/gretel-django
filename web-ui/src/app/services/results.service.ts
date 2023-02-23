@@ -60,6 +60,7 @@ export class ResultsService {
         provider: string,
         corpus: string,
         componentIds: string[],
+        retrieveContext: boolean,
         isAnalysis = this.defaultIsAnalysis,
         metadataFilters = this.defaultMetadataFilters,
         variables = this.defaultVariables,
@@ -72,6 +73,7 @@ export class ResultsService {
                 provider,
                 corpus,
                 componentIds,
+                retrieveContext,
                 isAnalysis,
                 metadataFilters,
                 variables
@@ -95,6 +97,7 @@ export class ResultsService {
         provider: string, // Not used anymore but leave for now
         corpus: string,
         componentIds: string[],
+        retrieveContext: boolean,
         isAnalysis = this.defaultIsAnalysis,
         metadataFilters = this.defaultMetadataFilters,
         variables = this.defaultVariables,
@@ -116,6 +119,7 @@ export class ResultsService {
                             componentIds,
                             queryId,
                             retrievedMatches,
+                            retrieveContext,
                             isAnalysis,
                             metadataFilters,
                             variables,
@@ -187,6 +191,7 @@ export class ResultsService {
         components: string[],
         queryId: number = undefined,
         retrievedMatches: number = undefined,
+        retrieveContext: boolean,
         isAnalysis = this.defaultIsAnalysis,
         metadataFilters = this.defaultMetadataFilters,
         variables = this.defaultVariables,
@@ -195,6 +200,7 @@ export class ResultsService {
         const results = await this.http.post<ApiSearchResult | false>(
             await this.configurationService.getDjangoUrl('search/search/'), {
             xpath: this.createFilteredQuery(xpath, metadataFilters),
+            retrieveContext,
             treebank: corpus,
             query_id: queryId,
             start_from: retrievedMatches,
