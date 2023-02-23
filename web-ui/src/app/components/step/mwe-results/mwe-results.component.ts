@@ -136,6 +136,7 @@ export class MweResultsComponent extends ResultsComponent {
                     xpath,
                     selectedTreebanks,
                     filterValues,
+                    this.retrieveContext,
                     behaviour
                 );
 

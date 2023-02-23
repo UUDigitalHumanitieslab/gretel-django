@@ -93,8 +93,6 @@ def generate_xquery_search(basex_db: str, xpath: str, variables=None) -> str:
             ' let $tree := ($node/ancestor::alpino_ds)' \
             ' let $sentid := ($tree/@id)' \
             ' let $sentence := ($tree/sentence)' \
-            ' let $prevs := ($tree/preceding-sibling::alpino_ds[1]/sentence)' \
-            ' let $nexts := ($tree/following-sibling::alpino_ds[1]/sentence)' \
             ' let $ids := ($node//@id)' \
             ' let $indexs := (distinct-values($node//@index))' \
             ' let $indexed := ($tree//node[@index=$indexs])' \
@@ -103,7 +101,6 @@ def generate_xquery_search(basex_db: str, xpath: str, variables=None) -> str:
             ' let $meta := ($tree/metadata/meta)' + \
             variables_let_fragment + \
             ' return <match>{data($sentid)}||{data($sentence)}' \
-            '||{data($prevs)}||{data($nexts)}' \
             '||{string-join($ids, \'-\')}||' \
             '{string-join($beginlist, \'-\')}||{$node}||{$meta}' \
             '||' + variables_return_fragment + '||' + \
@@ -208,7 +205,7 @@ def parse_search_result(result_str: str, component) -> List[Result]:
                              'is not closed in {}'.format(result))
         splitted = result.split('||')
         try:
-            (sentid, sentence, prevs, nexts, ids, begins, xml_sentences, meta,
+            (sentid, sentence, ids, begins, xml_sentences, meta,
              variables, database) = splitted
         except ValueError as err:
             raise ValueError('Cannot parse XQuery result: {}'.format(err))
@@ -219,8 +216,6 @@ def parse_search_result(result_str: str, component) -> List[Result]:
         matches.append(Result(BaseXMatch(
             sentid=sentid,
             sentence=sentence,
-            prevs=prevs,
-            nexts=nexts,
             ids=ids,
             begins=begins,
             xml_sentences=xml_sentences,

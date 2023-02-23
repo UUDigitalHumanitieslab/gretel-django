@@ -476,5 +476,30 @@ class SearchQuery(models.Model):
             m.variables = f'<vars>{vars_str}</vars>'
         return matches
 
+    def augment_with_context(self, matches: ResultSet) -> ResultSet:
+        """Fetch preceding and following sentences for matches in the result set"""
+        strip_match = re.compile(r'\+match=\d+$')
+        for match in matches:
+            sentid = strip_match.sub('', match._match.sentid)
+
+            # TODO: there's probably a more efficient way to fetch everything in a single query
+            # instead of one query per match
+
+            query = '''
+            let $tree := db:open("''' + match._match.database + '''")/treebank/alpino_ds[
+            @id="''' + sentid + '''"
+            ]
+            let $prevs := $tree/preceding-sibling::alpino_ds[1]/sentence
+            let $nexts := $tree/following-sibling::alpino_ds[1]/sentence
+            return
+            <match>{data($prevs)}||{data($nexts)}</match>
+            '''
+            result = basex.perform_query(query)
+            prevs, nexts = result.split('||')
+            prevs = prevs.replace('<match>', '')
+            nexts = nexts.replace('</match>', '')
+            match.add_context(prevs, nexts)
+        return matches
+
     def add_filter(self, filter_: ResultSetFilter):
         self.filters.append(filter_)
