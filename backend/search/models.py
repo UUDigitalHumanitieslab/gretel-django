@@ -474,17 +474,11 @@ class SearchQuery(models.Model):
             m.variables = f'<vars>{vars_str}</vars>'
         return matches
 
-    def augment_with_context(self, matches: ResultSet, limit: int) -> ResultSet:
-        """Fetch preceding and following sentences for matches in the result set,
-        up to limit results"""
-        i = 0
+    def augment_with_context(self, matches: ResultSet) -> ResultSet:
+        """Fetch preceding and following sentences for matches in the result set"""
+        strip_match = re.compile(r'\+match=\d+$')
         for match in matches:
-            if i > limit:
-                break
-
-            sentid = match._match.sentid
-            if '+match' in sentid:
-                sentid = sentid[:sentid.find('+')]
+            sentid = strip_match.sub('', match._match.sentid)
 
             # TODO: there's probably a more efficient way to fetch everything in a single query
             # instead of one query per match
