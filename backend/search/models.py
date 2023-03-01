@@ -5,7 +5,6 @@ from django.conf import settings
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
-from timeit import default_timer as timer
 from copy import deepcopy
 import logging
 import pathlib
@@ -109,8 +108,6 @@ class ComponentSearchResult(models.Model):
         self.errors = ''
         self.completed_part = 0
         self.number_of_results = 0
-        start_time = timer()
-        next_save_time = start_time + 1
         # Open cache file
         try:
             resultsfile = self._get_cache_path(True).open(mode='w')
@@ -319,16 +316,6 @@ class SearchQuery(models.Model):
 
         if to_number is None or to_number > from_number:
             for result_obj in self._component_results():
-                if not result_obj.search_completed:
-                    # If result is empty or partially complete, stop adding.
-                    # There might still be results in later ComponentSearchResult-s,
-                    # but if we give them back already they will be returned in
-                    # the incorrect order and we would have to keep track of what
-                    # has already been returned and what not. We continue our loop
-                    # though, because we still want to know the count so far and
-                    # the search percentage.
-                    break
-
                 # Add matches to list
                 matches = result_obj.get_results()
                 for filter_ in self.filters:
