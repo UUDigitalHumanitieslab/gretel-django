@@ -77,7 +77,11 @@ class ComponentSearchResult(models.Model):
         results = cache_file.read()
         cache_file.close()
         self.last_accessed = timezone.now()
-        self.save()
+        # This method may be called from multiple processes while the query is still
+        # running. If we save the entire model, we will overwrite the progress
+        # that other processes may have saved (e.g. search_completed) in case our copy
+        # of the model was not refreshed in the meantime.
+        self.save(update_fields=['last_accessed'])
         return parse_search_result(results, self.component.slug)
 
     def _truncate_results(self, results: str, number: int) -> str:
