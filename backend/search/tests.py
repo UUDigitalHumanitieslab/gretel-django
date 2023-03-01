@@ -1,10 +1,8 @@
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
 
-import unittest
-import json
 import lxml.etree as etree
 import tempfile
 import pathlib
@@ -18,7 +16,7 @@ from .basex_search import (check_db_name, check_xpath, generate_xquery_search,
                            check_xquery_variable_name,
                            parse_metadata_count_result,
                            generate_xquery_showtree)
-from .models import ComponentSearchResult, SearchQuery, SearchError
+from .models import ComponentSearchResult, SearchQuery
 
 test_treebank = None
 
@@ -265,7 +263,7 @@ class SearchQueryTestCase(TestCase):
             for csr in sq2.results.all():
                 csr.perform_search()
                 nr_results += csr.number_of_results
-            results, percentage, counts  = sq2.get_results()
+            results, percentage, counts = sq2.get_results()
             self.assertEqual(len(results), nr_results)
             self.assertEqual(percentage, 100)
 
