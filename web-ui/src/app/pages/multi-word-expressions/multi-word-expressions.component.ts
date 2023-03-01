@@ -138,19 +138,6 @@ export class MultiWordExpressionsComponent extends MultiStepPageDirective<MweSta
         this.updateXPath(query.xpath);
     }
 
-    async saveQuery() {
-        let query = this.globalState.currentQuery;
-        let response = await this.mweService.saveCustomQuery({
-            id: query.id,
-            description: query.description,
-            xpath: this.globalState.xpath,
-            rank: query.rank,
-            canonical: this.globalState.canonicalForm.id,
-        });
-
-        this.stateService.setState({currentQuery: response});
-    }
-
     updateRetrieveContext(retrieveContext: boolean) {
         this.stateService.setState({ retrieveContext });
     }
