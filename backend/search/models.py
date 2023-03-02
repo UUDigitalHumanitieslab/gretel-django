@@ -10,7 +10,7 @@ import logging
 import pathlib
 import re
 from datetime import timedelta
-from typing import List, Tuple, Iterable, Optional
+from typing import List, Tuple, Iterable, Optional, Set
 from lxml import etree
 
 from treebanks.models import Component
@@ -304,7 +304,7 @@ class SearchQuery(models.Model):
             matches = filter_(matches)
         return len(list(matches))
 
-    def get_results(self, from_number: int = 0, to_number: Optional[int] = None) -> Tuple[ResultSet, float, List]:
+    def get_results(self, max_results: Optional[int] = None, exclude: Optional[Set[str]] = None) -> Tuple[ResultSet, float, List]:
         """Get results so far. Object should have been initialized with
         initialize() method but search does not have to be started yet
         with perform_search() method. Return a tuple of the result as
@@ -318,20 +318,23 @@ class SearchQuery(models.Model):
         # 1. First we collect matches, and for that we would like to stop once
         # the desired amount of matches is reached.
 
-        if to_number is None or to_number > from_number:
-            for result_obj in self._component_results():
-                # Add matches to list
-                matches = result_obj.get_results()
-                for filter_ in self.filters:
-                    matches = filter_(matches)
-                all_matches.extend(matches)
-                if to_number is not None and len(all_matches) > to_number:
-                    break
+        for result_obj in self._component_results():
+            matches = result_obj.get_results()
+            # exclude matches that were already returned
+            if exclude is not None:
+                matches = [m for m in matches if m.id not in exclude]
+
+            for filter_ in self.filters:
+                matches = filter_(matches)
+            all_matches.extend(matches)
+
+            if max_results is not None and len(all_matches) > max_results:
+                break
 
         # 2. Here we collect statistics, and for that we would
         # like to loop over the complete results set.
 
-        for result_obj in self.results.all().order_by('component'):
+        for result_obj in self._component_results():
             # Count completed part (for all results)
             if result_obj.completed_part is not None:
                 completed_part += result_obj.completed_part
@@ -351,12 +354,9 @@ class SearchQuery(models.Model):
         else:
             search_percentage = 100
 
-        # Skip results that were already returned
-        all_matches = all_matches[from_number:]
-
         # Check if too many results have been added
-        if to_number is not None:
-            all_matches = all_matches[0:to_number]
+        if max_results is not None:
+            all_matches = all_matches[0:max_results]
 
         self.last_accessed = timezone.now()
         self.save()
