@@ -72,7 +72,7 @@ class Result:
         self._nexts = nexts
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self._match.sentid
 
     def __eq__(self, other):

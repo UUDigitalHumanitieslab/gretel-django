@@ -305,8 +305,8 @@ class SearchQuery(models.Model):
         return len(list(matches))
 
     def get_results(self, max_results: Optional[int] = None, exclude: Optional[Set[str]] = None) -> Tuple[ResultSet, float, List]:
-        """Get results so far. Object should have been initialized with
-        initialize() method but search does not have to be started yet
+        """Get results so far, except for those whose ids are in `exclude`.
+        Object should have been initialized with initialize() method but search does not have to be started yet
         with perform_search() method. Return a tuple of the result as
         a list of dictionaries and the percentage of search completion.
         This method saves the object to update last accessed time."""

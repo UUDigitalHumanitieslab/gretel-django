@@ -209,7 +209,9 @@ def search_view(request):
             # No connection with message broker - run synchronously
             run_search_query.apply((query.pk,))
 
-    # Get results so far, if any
+    # Get results so far, if any.
+    # We store the ids of returned results in the request session,
+    # in order to deduplicate results by id.
     session_key = f'returned_{query.pk}'
     returned = set(request.session.get(session_key, []))
     maximum_results = max(0, maximum_results - len(returned))
