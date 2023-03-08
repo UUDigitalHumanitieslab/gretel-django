@@ -267,12 +267,21 @@ class SearchQueryTestCase(TestCase):
             self.assertEqual(len(results), nr_results)
             self.assertEqual(percentage, 100)
 
-            # Check if from_number and to_number work
-            # (there should be seven results)
-            results2, _, _ = sq2.get_results(from_number=1)
-            self.assertEqual(results[1:], results2)
-            results3, _, _ = sq2.get_results(to_number=4)
-            self.assertEqual(results[:4], results3)
+            # The remainder of the test assumes that there are more than
+            # two results (seven in the current setup).
+            assert len(results) > 2
+
+            # Check if exclude parameter works
+            exclude_set = set([x.id for x in results][0:2])
+            results2, _, _ = sq2.get_results(exclude=exclude_set)
+            self.assertEqual(len(results2), len(results) - 2)
+            # Empty set
+            results3, _, _ = sq2.get_results(exclude=set())
+            self.assertEqual(len(results3), len(results))
+            # Full set
+            exclude_set = set([x.id for x in results])
+            results4, _, _ = sq2.get_results(exclude=exclude_set)
+            self.assertEqual(len(results4), 0)
 
     def test_perform_search(self):
         with self.settings(CACHING_DIR=test_cache_path):
