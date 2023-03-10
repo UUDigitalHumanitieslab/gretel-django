@@ -58,9 +58,6 @@ export class MweResultsComponent extends ResultsComponent {
     }
 
     @Output()
-    public saveQuery = new EventEmitter();
-
-    @Output()
     public changeQuery = new EventEmitter<MweQuery>();
 
     @Input()
@@ -136,6 +133,7 @@ export class MweResultsComponent extends ResultsComponent {
                     xpath,
                     selectedTreebanks,
                     filterValues,
+                    this.retrieveContext,
                     behaviour
                 );
 

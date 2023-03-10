@@ -33,7 +33,7 @@ def generate_queries(sentence: str) -> List[MWEQuery]:
     queries:
     1. Multi-word expression query
     2. "Near-miss" query
-    3. Superset query
+    3. Superset query (aka major lemma query)
 
     The superset query is special in the sense that it is executed directly on BaseX.
     The other queries are executed against the results of the superset query.
@@ -47,7 +47,7 @@ def generate_queries(sentence: str) -> List[MWEQuery]:
     return [
         MWEQuery(xpath=generated[0], description='Multi-word expression query', rank=1),
         MWEQuery(xpath=generated[1], description='Near-miss query', rank=2),
-        MWEQuery(xpath=generated[2], description='Superset query', rank=3),
+        MWEQuery(xpath=generated[2], description='Major lemma query', rank=3),
     ]
 
 
@@ -75,10 +75,3 @@ class GenerateMweQueries(APIView):
                 queries[query.rank - 1] = XPathQuerySerializer(query).data
 
         return Response(queries.values())
-
-
-class XPathQueryViewSet(ModelViewSet):
-    serializer_class = XPathQuerySerializer
-
-    def get_queryset(self):
-        return XPathQuery.objects.all()

@@ -209,9 +209,18 @@ def search_view(request):
             # No connection with message broker - run synchronously
             run_search_query.apply((query.pk,))
 
-    # Get results so far, if any
-    results, percentage, counts = \
-        query.get_results(start_from, maximum_results)
+    # Get results so far, if any.
+    # We store the ids of returned results in the request session,
+    # in order to deduplicate results by id.
+    session_key = f'returned_{query.pk}'
+    returned = set(request.session.get(session_key, []))
+    maximum_results = max(0, maximum_results - len(returned))
+    results, percentage, counts = query.get_results(maximum_results, exclude=returned)
+    returned |= set(r.id for r in results)
+    request.session[session_key] = list(returned)
+
+    if data.get('retrieveContext'):
+        results = query.augment_with_context(results)
 
     # serialize results
     results = [result.as_dict() for result in results]

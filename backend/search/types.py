@@ -8,8 +8,6 @@ from lxml import etree
 class BaseXMatch:
     sentid: str
     sentence: str
-    prevs: str
-    nexts: str
     ids: str
     begins: str
     xml_sentences: str
@@ -22,18 +20,22 @@ class Result:
     _match: BaseXMatch
     _tree: Optional[etree.ElementTree]
     _variables: str
+    _nexts: str
+    _prevs: str
 
     def __init__(self, match: BaseXMatch):
         self._match = match
         self._tree = None
         self._variables = ''
+        self._prevs = ''
+        self._nexts = ''
 
     def as_dict(self):
         return dict(
             sentid=self._match.sentid,
             sentence=self._match.sentence,
-            prevs=self._match.prevs,
-            nexts=self._match.nexts,
+            prevs=self._prevs,
+            nexts=self._nexts,
             ids=self._match.ids,
             begins=self._match.begins,
             xml_sentences=self._match.xml_sentences,
@@ -64,6 +66,14 @@ class Result:
     def variables(self, variables):
         # this is set by SearchQuery, but variable resolution could potentially be moved here
         self._variables = variables
+
+    def add_context(self, prevs, nexts):
+        self._prevs = prevs
+        self._nexts = nexts
+
+    @property
+    def id(self) -> str:
+        return self._match.sentid
 
     def __eq__(self, other):
         # used for testing purposes
