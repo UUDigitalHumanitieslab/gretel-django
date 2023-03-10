@@ -1,9 +1,8 @@
-@import '~@angular/material/theming';
+@import '@angular/material/theming';
 @include mat-core();
 
 @function create-mat-color($color, $color-invert) {
-    @return (
-        50: desaturate(lighten($primary, 25%), 25%),
+    @return (50: desaturate(lighten($primary, 25%), 25%),
         100: desaturate(lighten($primary, 20%), 20%),
         200: desaturate(lighten($primary, 15%), 15%),
         300: desaturate(lighten($primary, 10%), 10%),
@@ -17,8 +16,7 @@
         A200: saturate(lighten($primary, 15%), 20%),
         A400: saturate(lighten($primary, 10%), 20%),
         A700: saturate(lighten($primary, 5%), 20%),
-        contrast: (
-            50: $color-invert,
+        contrast: (50: $color-invert,
             100: $color-invert,
             200: $color-invert,
             300: $color-invert,
@@ -32,14 +30,19 @@
             A200: $color-invert,
             A400: $color-invert,
             A700: $color-invert,
-        )
-    );
+        ));
 }
 
 $primary-palette: mat-palette(create-mat-color($primary, $primary-invert));
 $accent-palette: mat-palette(create-mat-color($secondary, $secondary-invert));
 $warn-palette: mat-palette(create-mat-color($danger, $danger-invert));
 
-$mat-bulma-theme: mat-light-theme($primary-palette, $accent-palette, $warn-palette);
+$mat-bulma-theme: mat-light-theme((color: (primary:$primary-palette,
+            accent:$accent-palette,
+            warn:$warn-palette)));
 
 @include angular-material-theme($mat-bulma-theme);
+
+mat-form-field .mat-mdc-form-field-infix {
+    width: 100%;
+}
