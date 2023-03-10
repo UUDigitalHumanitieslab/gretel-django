@@ -117,63 +117,66 @@ class ComponentSearchResult(models.Model):
             resultsfile = self._get_cache_path(True).open(mode='w')
         except OSError:
             raise SearchError('Could not open caching file')
-        with resultsfile:
-            cancelled = False
-            did_break = False
-            # Go through all BaseX databases
-            for database in databases_with_size:
-                size = databases_with_size[database]
-                # Check how many results we can still add to the cache file,
-                # respecting the maximum number of results per component
-                maximum_to_add = \
-                    settings.MAXIMUM_RESULTS_PER_COMPONENT - \
-                    self.number_of_results
-                if maximum_to_add > 0:
-                    # We can still add, so perform a search on this database
-                    try:
-                        query = generate_xquery_search(
-                            database, self.xpath
-                        )
-                        result = basex.perform_query_iter(query)
-                    except (OSError, UnicodeDecodeError, ValueError) as err:
-                        self.errors += 'Error searching database {}: ' \
-                            .format(database) + str(err) + '\n'
-                        result = []  # No break, keep going
+        try:
+            with resultsfile:
+                cancelled = False
+                did_break = False
+                # Go through all BaseX databases
+                for database in databases_with_size:
+                    size = databases_with_size[database]
+                    # Check how many results we can still add to the cache file,
+                    # respecting the maximum number of results per component
+                    maximum_to_add = \
+                        settings.MAXIMUM_RESULTS_PER_COMPONENT - \
+                        self.number_of_results
+                    if maximum_to_add > 0:
+                        # We can still add, so perform a search on this database
+                        try:
+                            query = generate_xquery_search(
+                                database, self.xpath
+                            )
+                            result = basex.perform_query_iter(query)
+                        except (OSError, UnicodeDecodeError, ValueError) as err:
+                            self.errors += 'Error searching database {}: ' \
+                                .format(database) + str(err) + '\n'
+                            result = []  # No break, keep going
 
-                    results_for_database = 0
-                    for _, entry in result:
-                        if results_for_database > maximum_to_add:
-                            # no need to read the rest of the results,
-                            # but we do need to run a separate count query if we
-                            # want an accurate count
-                            did_break = True
-                            break
-                        results_for_database += 1
-                        resultsfile.write(entry)
+                        results_for_database = 0
+                        for _, entry in result:
+                            if results_for_database > maximum_to_add:
+                                # no need to read the rest of the results,
+                                # but we do need to run a separate count query if we
+                                # want an accurate count
+                                did_break = True
+                                break
+                            results_for_database += 1
+                            resultsfile.write(entry)
 
-                    if not did_break:
-                        self.number_of_results += results_for_database
+                        if not did_break:
+                            self.number_of_results += results_for_database
 
-                if maximum_to_add <= 0 or did_break:
-                    # The maximum number of results per component has been
-                    # reached. From now on only count the number of results,
-                    # which is somewhat faster
-                    query = generate_xquery_count(database, self.xpath)
-                    try:
-                        count = int(basex.perform_query(query))
-                    except (OSError, UnicodeDecodeError, ValueError) as err:
-                        self.errors += 'Error searching database {}: ' \
-                            .format(database) + str(err) + '\n'
-                        count = 0
-                    self.number_of_results += count
-                self.completed_part += size
-                self.save()
-                if query_id is not None and self._was_query_cancelled(query_id):
-                    cancelled = True
-                    break
-        self.cache_size = self._get_cache_path(False).stat().st_size
-        if not cancelled:
-            self.search_completed = timezone.now()
+                    if maximum_to_add <= 0 or did_break:
+                        # The maximum number of results per component has been
+                        # reached. From now on only count the number of results,
+                        # which is somewhat faster
+                        query = generate_xquery_count(database, self.xpath)
+                        try:
+                            count = int(basex.perform_query(query))
+                        except (OSError, UnicodeDecodeError, ValueError) as err:
+                            self.errors += 'Error searching database {}: ' \
+                                .format(database) + str(err) + '\n'
+                            count = 0
+                        self.number_of_results += count
+                    self.completed_part += size
+                    self.save()
+                    if query_id is not None and self._was_query_cancelled(query_id):
+                        cancelled = True
+                        break
+            self.cache_size = self._get_cache_path(False).stat().st_size
+            if not cancelled:
+                self.search_completed = timezone.now()
+        except Exception as err:
+            self.errors += f'Error searching: ${err}\n'
         self.last_accessed = timezone.now()
         self.save()
 
@@ -365,7 +368,6 @@ class SearchQuery(models.Model):
 
     def perform_search(self) -> None:
         """Perform search and regularly update on progress"""
-
         # Get result objects for this query, but only those that have not
         # completed yet, and starting with those that have not started yet
         # (because those for which search has already started may finish
