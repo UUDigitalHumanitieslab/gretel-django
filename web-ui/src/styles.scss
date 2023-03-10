@@ -49,6 +49,10 @@ $pageloader-opacity: 0.6;
     }
 }
 
+.modal {
+    z-index: 501;
+}
+
 .is-loading {
     /*! adapted from bulma.io v0.6.0 | MIT License | github.com/jgthms/bulma */
 

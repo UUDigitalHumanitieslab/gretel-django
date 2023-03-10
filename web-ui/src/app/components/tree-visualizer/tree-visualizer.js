@@ -104,18 +104,26 @@ var jQuery = require('jquery');
                         tooltipList = tree.next(".tv-tooltip").children("ul"),
                         i;
 
+                    instance.trigger('node-selected', [data]);
+
                     tooltipList.empty();
                     tree.find("a").removeClass("hovered");
-                    $this.addClass("hovered");
 
-                    for (i in data) {
-                        if (data.hasOwnProperty(i) && i != 'uiDraggable') {
-                            $("<li>", {
-                                html: "<strong>" + i + "</strong>: " + data[i]
-                            }).prependTo(tooltipList);
+                    if ($this.is(".selected")) {
+                        // when the node has been selected, only unselect it
+                        tooltipFS.hide();
+                    } else {
+                        $this.addClass("hovered");
+
+                        for (i in data) {
+                            if (data.hasOwnProperty(i) && i != 'uiDraggable') {
+                                $("<li>", {
+                                    html: "<strong>" + i + "</strong>: " + data[i]
+                                }).prependTo(tooltipList);
+                            }
                         }
+                        tooltipPosition();
                     }
-                    tooltipPosition();
                 }
 
                 e.preventDefault();
@@ -129,11 +137,19 @@ var jQuery = require('jquery');
                 }
             });
 
-            anyTooltip.children("button").on("click", function () {
-                var tooltip = $(this).parent(".tv-tooltip");
-                tooltip.fadeOut(250);
-                tooltip.prev(".tv-tree").find("a").removeClass("hovered");
+            function hideTooltip() {
+                anyTooltip.fadeOut(250);
+                anyTree.find("a").removeClass("hovered");
+            }
+
+            $body.on("click", function (event) {
+                if (!$(event.target).closest('a,.tv-tooltip').length) {
+                  // clicked somewhere except on the tooltip itself or
+                  // a (node) link
+                  hideTooltip();
+                }
             });
+            anyTooltip.children("button").on("click", hideTooltip);
         }
 
         function navigationDisabler() {
@@ -215,7 +231,7 @@ var jQuery = require('jquery');
             }
         }
 
-        instance.bind('open-fullscreen', openFullscreen);
+        instance.on('open-fullscreen', openFullscreen);
 
         function openFullscreen() {
             anyTooltip.hide().children("ul").empty();
@@ -228,7 +244,7 @@ var jQuery = require('jquery');
             });
         }
 
-        instance.bind('close-fullscreen', closeFullscreen);
+        instance.on('close-fullscreen', closeFullscreen);
 
         function closeFullscreen() {
             instance.trigger('close');
@@ -238,6 +254,16 @@ var jQuery = require('jquery');
                 removeError();
             });
             if (args.initFSOnClick) history.replaceState("", document.title, window.location.pathname + window.location.search);
+        }
+
+        instance.on('select-nodes', selectNodes);
+
+        function selectNodes(event, selectedNodes) {
+            $('.tree-visualizer li[data-varname] a.selected').removeClass('selected');
+            for (var i in selectedNodes) {
+                var node = selectedNodes[i];
+                $('.tree-visualizer li[data-varname="' + node + '"] > a').addClass('selected');
+            }
         }
 
         // Build the HTML list output
@@ -273,7 +299,7 @@ var jQuery = require('jquery');
             anyTree.find("a").each(function () {
                 var $this = $(this),
                     li = $this.parent("li");
-                
+
                 const excluded = (li.data("exclude") || "").split(",");
                 function checkExclude(attr) {
                     if (excluded.indexOf(attr) >= 0) {

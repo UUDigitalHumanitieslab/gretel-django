@@ -14,6 +14,8 @@ export class XPathViewerComponent implements OnChanges, OnInit {
     public variables: { [name: string]: PathVariable };
     @Input()
     public paddingless = false;
+    @Input()
+    public selectedVariables: { [name: string]: boolean } = {};
 
     @Output()
     public partClick = new EventEmitter<XPathPart>();

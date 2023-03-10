@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnChanges, ViewChild, ElementRef } from '@angular/core';
 import { faBan, faCheck, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { SearchVariable, VariableProperty } from '../../services/_index';
+import { TypedChanges } from '../util';
 
 export interface AddNodeEvent {
     node: SearchVariable;
@@ -20,12 +21,13 @@ export class NodePropertiesEditorComponent implements OnChanges {
 
     @ViewChild('propNameField', { static: true })
     propNameField: ElementRef<HTMLInputElement>;
+    nodeNameValue: string = '';
 
     @Input()
     nodes: SearchVariable[];
 
     @Input()
-    nodeName: string;
+    nodeName: string = '';
 
     @Output()
     nodesChanges = new EventEmitter<SearchVariable[]>();
@@ -36,11 +38,11 @@ export class NodePropertiesEditorComponent implements OnChanges {
     propName: string;
     propExpression: string;
 
-    constructor() { }
-
-    ngOnChanges() {
-        if (!this.nodeName && this.nodes && this.nodes.length) {
-            this.nodeName = this.nodes[0].name;
+    ngOnChanges(changes: TypedChanges<NodePropertiesEditorComponent>) {
+        if (changes.nodeName) {
+            this.nodeNameValue = this.nodeName;
+        } else if (!this.nodeName && this.nodes && this.nodes.length) {
+            this.nodeNameValue = this.nodes[0].name;
         }
     }
 

@@ -1,13 +1,17 @@
 <div class="notification is-primary explanation" *ngIf="renderCount && showExplanation" [@slideDown]>
     <button class="delete" (click)="showExplanation = false"></button>
-    <p>Drag a node from the <strong>XPath query</strong> or the <strong>tree</strong> into the analysis table below to
-        analyse its properties.</p>
+    <p>Drag nodes from the <strong>XPath query</strong> or the <strong>tree</strong> into the analysis table below to
+        analyse its properties. Multiple nodes can be selected by clicking on them.</p>
 </div>
 <div class="columns query" [ngClass]="{'disabled': disabled}">
     <div class="column" [ngClass]="{'is-half': treeXml}">
-        <h2 class="subtitle">XPath</h2>
+        <h2 class="subtitle" style="height: 2.5rem">XPath</h2>
         <div class="content">
-            <grt-xpath-viewer [value]="xpath" [variables]="variables"></grt-xpath-viewer>
+            <grt-xpath-viewer [value]="xpath" [variables]="nodes" [selectedVariables]="selectedNodes"
+                (partClick)="nodeClick($event.variableName)"></grt-xpath-viewer>
+            <p class="has-text-right">
+                <a class="button is-white mt-2" [ngClass]="{'is-invisible': selectedNodesCount < 1}" (click)="deselectNodes()">deselect nodes</a>
+            </p>
         </div>
     </div>
     <div class="column" *ngIf="treeXml">
@@ -29,14 +33,18 @@
             </div>
         </h2>
         <grt-tree-visualizer [xml]="treeXml" [display]="treeDisplay" [fullScreenButton]="false"
-            (displayChange)="treeDisplay = $event"></grt-tree-visualizer>
+            [selectedNodes]="selectedNodes" (displayChange)="treeDisplay = $event"
+            (nodeClick)="nodeClick($event)"></grt-tree-visualizer>
+        <p class="has-text-right">
+            <a class="mt-2 button is-white" [ngClass]="{'is-invisible': selectedNodesCount < 1}" (click)="deselectNodes()">deselect nodes</a>
+        </p>
     </div>
 </div>
 <div class="modal is-active" *ngIf="selectedVariable" [@slideDown]>
     <div class="modal-background"></div>
     <div class="modal-content">
         <div class="box" *ngIf="custom">
-            <grt-node-properties (add)="addVariable($event)" [nodeName]="selectedVariable.variable.name">
+            <grt-node-properties (add)="addVariable($event)" [nodeName]="selectedVariable.nodes[0].name">
             </grt-node-properties>
             <div class="level">
                 <div class="level-left">
@@ -56,9 +64,9 @@
         <div class="box" *ngIf="!custom">
             <div class="content">
                 Which property of
-                <span class="tag">{{selectedVariable.variable.name}}</span> should be analyzed?
+                <span class="tag" *ngFor="let node of selectedVariable.nodes">{{node.name}}</span> should be analyzed?
             </div>
-            <grt-xpath-viewer [value]="selectedVariable.variable.path"></grt-xpath-viewer>
+            <grt-xpath-viewer *ngFor="let node of selectedVariable.nodes" [value]="node.path"></grt-xpath-viewer>
             <br />
             <div class="field">
                 <ng-select [(ngModel)]="selectedVariable.attribute" required="true">
