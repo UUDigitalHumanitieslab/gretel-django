@@ -5,6 +5,10 @@ import * as _ from 'lodash';
 
 import { Hit } from './results.service';
 
+// use three spaces, this way values can be split
+// even if values themselves might contain spaces
+const valueSeparator = '   ';
+
 @Injectable()
 export class AnalysisService {
     /**
@@ -13,13 +17,11 @@ export class AnalysisService {
     public static placeholder = '(none)';
 
     public joinValues(values: string[]): string {
-        // use three spaces, this way values can be split
-        // even if values themselves might contain spaces
-        return values.join('   ');
+        return values.join(valueSeparator);
     }
 
     public splitValues(values: string): string[] {
-        return values.split('  ');
+        return values.split(valueSeparator);
     }
 
     /**
