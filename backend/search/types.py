@@ -71,6 +71,10 @@ class Result:
         self._prevs = prevs
         self._nexts = nexts
 
+    @property
+    def id(self) -> str:
+        return self._match.sentid
+
     def __eq__(self, other):
         # used for testing purposes
         return self._match == other._match

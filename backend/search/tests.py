@@ -1,10 +1,8 @@
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.conf import settings
 from django.core.management import call_command
 from django.utils import timezone
 
-import unittest
-import json
 import lxml.etree as etree
 import tempfile
 import pathlib
@@ -18,7 +16,7 @@ from .basex_search import (check_db_name, check_xpath, generate_xquery_search,
                            check_xquery_variable_name,
                            parse_metadata_count_result,
                            generate_xquery_showtree)
-from .models import ComponentSearchResult, SearchQuery, SearchError
+from .models import ComponentSearchResult, SearchQuery
 
 test_treebank = None
 
@@ -133,9 +131,9 @@ class BaseXSearchTestCase(TestCase):
         )
 
     def test_parse_search_result(self):
-        input_str = '<match>id||sentence||prevs||nexts||ids||begins||' \
+        input_str = '<match>id||sentence||ids||begins||' \
             'xml_sentences||meta||vars||db</match><match>id2||sentence2' \
-            '||prevs||nexts||ids2||begins2' \
+            '||ids2||begins2' \
             '||xml_sentences2||meta2||vars||db</match>'
         res = [r.as_dict() for r in parse_search_result(input_str, 'component')]
         self.assertEqual('sentence', res[0]['sentence'])
@@ -245,7 +243,7 @@ class SearchQueryTestCase(TestCase):
             sq = SearchQuery(xpath=XPATH1)
             sq.save()
             sq.initialize()
-            results, percentage, _, _ = sq.get_results()
+            results, percentage, _ = sq.get_results()
             self.assertEqual(len(results), 0)
 
             # New SQ without any results
@@ -256,7 +254,7 @@ class SearchQueryTestCase(TestCase):
             components = test_treebank.components.all()
             sq2.components.add(*components)
             sq2.initialize()
-            results, percentage, _, _ = sq2.get_results()
+            results, percentage, _ = sq2.get_results()
             self.assertEqual(len(results), 0)
             self.assertEqual(percentage, 0)
 
@@ -265,16 +263,25 @@ class SearchQueryTestCase(TestCase):
             for csr in sq2.results.all():
                 csr.perform_search()
                 nr_results += csr.number_of_results
-            results, percentage, counts, _ = sq2.get_results()
+            results, percentage, counts = sq2.get_results()
             self.assertEqual(len(results), nr_results)
             self.assertEqual(percentage, 100)
 
-            # Check if from_number and to_number work
-            # (there should be seven results)
-            results2, _, _, _ = sq2.get_results(from_number=1)
-            self.assertEqual(results[1:], results2)
-            results3, _, _, _ = sq2.get_results(to_number=4)
-            self.assertEqual(results[:4], results3)
+            # The remainder of the test assumes that there are more than
+            # two results (seven in the current setup).
+            assert len(results) > 2
+
+            # Check if exclude parameter works
+            exclude_set = set([x.id for x in results][0:2])
+            results2, _, _ = sq2.get_results(exclude=exclude_set)
+            self.assertEqual(len(results2), len(results) - 2)
+            # Empty set
+            results3, _, _ = sq2.get_results(exclude=set())
+            self.assertEqual(len(results3), len(results))
+            # Full set
+            exclude_set = set([x.id for x in results])
+            results4, _, _ = sq2.get_results(exclude=exclude_set)
+            self.assertEqual(len(results4), 0)
 
     def test_perform_search(self):
         with self.settings(CACHING_DIR=test_cache_path):

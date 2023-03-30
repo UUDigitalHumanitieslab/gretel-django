@@ -6,7 +6,7 @@
 #
 -e git+https://github.com/UUDigitalHumanitieslab/mwe-query@bugfix/tests#egg=mwe-query
     # via -r requirements.in
-alpino-query==2.1.9
+alpino-query==2.1.10
     # via
     #   -r requirements.in
     #   mwe-query

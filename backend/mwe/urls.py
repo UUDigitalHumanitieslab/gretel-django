@@ -2,7 +2,7 @@ from django.urls import path
 
 from rest_framework.routers import SimpleRouter
 
-from .views import CanonicalFormList, GenerateMweQueries, XPathQueryViewSet
+from .views import CanonicalFormList, GenerateMweQueries
 
 urlpatterns = [
     path('canonical', CanonicalFormList.as_view(), name='canonical'),
@@ -10,6 +10,5 @@ urlpatterns = [
 ]
 
 router = SimpleRouter()
-router.register('xpath', XPathQueryViewSet, basename='xpath')
 
 urlpatterns += router.urls  # type: ignore
