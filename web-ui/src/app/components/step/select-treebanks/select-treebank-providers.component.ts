@@ -147,7 +147,7 @@ export class SelectTreebankProvidersComponent implements OnChanges, OnDestroy {
         if (!this.showUserTagsTriggered) {
             if (!this.allUsersSelected && selectedUserIds.length) {
                 this.showUserTagsTriggered = true;
-                this.showUserTags.next();
+                this.showUserTags.emit();
             }
         }
     }

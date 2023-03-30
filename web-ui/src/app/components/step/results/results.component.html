@@ -23,8 +23,8 @@
     (downloadResults)="downloadResults($event)"
     (downloadFilelist)="downloadFilelist()"
     (toggleContext)="toggleContext()"
-    (prev)="prev.next()"
-    (next)="next.next()"
+    (prev)="prev.emit()"
+    (next)="next.emit()"
     (showTree)="showTree($event)"
 ></grt-results-table>
 <grt-tree-visualizer *ngIf="loadingTree || treeXml" display="fullscreen" [sentence]="treeSentence" [xml]="treeXml"

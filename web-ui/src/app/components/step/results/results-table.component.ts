@@ -223,7 +223,7 @@ export class ResultsTableComponent implements OnInit, OnDestroy {
         ])
             .pipe(
                 debounceTime(100), // lots of values bouncing around during initialization
-                map(([fields, counts]) => this.getFilters(fields, counts))
+                map(([fields, counts]) => this.getFilters(fields ?? [], counts ?? {}))
             );
     }
 

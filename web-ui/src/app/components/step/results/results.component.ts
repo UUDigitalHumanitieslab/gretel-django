@@ -198,6 +198,8 @@ export class ResultsComponent extends StepDirective<GlobalState> implements OnIn
                                 this.outgoingCounts[provider] = {};
                             }
                             this.outgoingCounts[provider][corpus] = r.result.value.counts;
+                            // trigger change detection
+                            this.outgoingCounts = { ...this.outgoingCounts };
 
                             this.changes = Math.random();
 

@@ -103,7 +103,7 @@
     <div class="level-right">
         <div class="level-item" *ngIf="canShowMore" grtBalloon="More data is ready to be shown in the table">
             <a class="button has-badge-rounded" [ngClass]="{'has-badge-warning': isLoading}" role="button"
-                (click)="showMore()" [attr.data-badge]="hitsCount - renderCount">
+                (click)="showMore()" [attr.data-badge]="hitsCount - renderCount | transitionNumbers">
                 Show More Data
             </a>
         </div>

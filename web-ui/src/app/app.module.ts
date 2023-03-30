@@ -80,6 +80,7 @@ import { NodePropertiesEditorComponent } from './components/node-properties/node
 
 import { HighlightPipe } from './highlight.pipe';
 import { HighlightMatchPipe } from './highlight-match.pipe';
+import { TransitionNumbersPipe } from './transition-numbers.pipe';
 import { QuerySetComponent } from './components/step/query-set/query-set.component';
 import { MweResultsComponent } from './components/step/mwe-results/mwe-results.component';
 
@@ -104,6 +105,7 @@ export const declarations: any[] = [
     HeaderComponent,
     HighlightPipe,
     HighlightMatchPipe,
+    TransitionNumbersPipe,
     HomeContentComponent,
     HomePageComponent,
     LoginStatusComponent,

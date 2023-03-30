@@ -1,0 +1,34 @@
+{
+    "/gretel-upload": {
+        "target": "https://gretel-upload.hum.uu.nl/",
+        "changeOrigin": true
+    },
+    "/api": {
+        "target": "https://gretel5.hum.uu.nl",
+        "changeOrigin": true
+    },
+    "/admin": {
+        "target": "https://gretel5.hum.uu.nl",
+        "changeOrigin": true
+    },
+    "/static": {
+        "target": "https://gretel5.hum.uu.nl",
+        "changeOrigin": true
+    },
+    "/mwe/": {
+        "target": "https://gretel5.hum.uu.nl/",
+        "changeOrigin": true
+    },
+    "/parse/": {
+        "target": "https://gretel5.hum.uu.nl/",
+        "changeOrigin": true
+    },
+    "/search/": {
+        "target": "https://gretel5.hum.uu.nl/",
+        "changeOrigin": true
+    },
+    "/treebanks/": {
+        "target": "https://gretel5.hum.uu.nl/",
+        "changeOrigin": true
+    }
+}

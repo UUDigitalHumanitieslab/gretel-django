@@ -43,7 +43,7 @@
     <div class="level-right is-hidden-print">
         <div class="level-item">
             <div class="field">
-                <p class="control" (click)="prev.next()">
+                <p class="control" (click)="prev.emit()">
                     <a class="button is-hidden-tablet" role="button" title="Previous">
                         <span class="icon ">
                             <fa-icon [icon]="faChevronLeft" aria-hidden="true"></fa-icon>
@@ -57,7 +57,7 @@
         </div>
         <div class="level-item">
             <div class="field">
-                <p class="control" (click)="next.next()">
+                <p class="control" (click)="next.emit()">
                     <a class="button is-hidden-tablet" role="button" title="Previous">
                         <span class="icon">
                             <fa-icon [icon]="faChevronRight" aria-hidden="true"></fa-icon>

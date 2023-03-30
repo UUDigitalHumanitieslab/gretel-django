@@ -127,7 +127,7 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
         for (const subscription of this.subscriptions) {
             subscription.unsubscribe();
         }
-        this.cancellationToken.next();
+        this.cancellationToken.next({});
     }
 
     showMore() {

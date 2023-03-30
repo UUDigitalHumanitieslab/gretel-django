@@ -45,8 +45,8 @@
     [filteredResults]="filteredResults"
     [filters]="filters"
     [retrieveContext]="retrieveContext"
-    (prev)="prev.next()"
-    (next)="next.next()"
+    (prev)="prev.emit()"
+    (next)="next.emit()"
     (toggleContext)="toggleContext()"
     (showTree)="showTree($event)"
 ></grt-results-table>

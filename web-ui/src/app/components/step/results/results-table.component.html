@@ -16,7 +16,7 @@
             </div>
             <div class="level-item">
                 <h1 class="title" [ngClass]="{'is-loading': loading}" grtSubtitle>
-                    Results: {{filteredResults.length - hiddenCount}}<ng-container *ngIf="hiddenCount > 0"> ({{hiddenCount}}
+                    Results: {{filteredResults.length - hiddenCount | transitionNumbers}}<ng-container *ngIf="hiddenCount > 0"> ({{hiddenCount | transitionNumbers}}
                         hidden)
                     </ng-container>
                 </h1>
@@ -145,7 +145,6 @@
                                 <span *ngIf="retrieveContext" class="content is-small">{{rowData['previousSentence']}} </span>
                                 <span [innerHTML]="rowData['highlightedSentence']"></span>
                                 <span *ngIf="retrieveContext" class="content is-small"> {{rowData['nextSentence']}}</span>
-                                
                             </ng-container>
 
                             <span [innerHTML]="rowData[col.field]" *ngSwitchDefault></span>
