@@ -17,7 +17,7 @@
     </div>
 </h2>
 <table class="table is-fullwidth scroll has-text-left">
-    <thead>
+    <thead #thead>
         <tr>
             <th scope="col">
                 <!-- disabled checkbox to align precisely with the other checkboxes-->
@@ -26,11 +26,11 @@
                 </label>
                 Name
             </th>
-            <th scope="col" class="has-text-right">Hits &nbsp;&nbsp;</th>
-            <th scope="col" class="has-text-right">All Sentences &nbsp;&nbsp;</th>
+            <th scope="col" class="has-text-right" #padCell>Hits</th>
+            <th scope="col" class="has-text-right" #padCell>All Sentences</th>
         </tr>
     </thead>
-    <tbody>
+    <tbody #tbody>
         <ng-container *ngFor="let provider of state | keyvalue; trackBy: trackByKey">
             <ng-container *ngFor="let corpus of provider.value | keyvalue; trackBy: trackByKey">
                 <tr>
@@ -74,11 +74,11 @@
     <tfoot>
         <tr>
             <td></td>
-            <td class="has-text-right">
+            <td class="has-text-right" #padCell>
                 <span class="icon is-loading" *ngIf="loading"></span>
-                {{totalHits | transitionNumbers}} &nbsp;&nbsp;
+                {{totalHits | transitionNumbers}}
             </td>
-            <td class="has-text-right">{{totalSentences}} &nbsp;&nbsp;</td>
+            <td class="has-text-right" #padCell>{{totalSentences}}</td>
         </tr>
     </tfoot>
 </table>

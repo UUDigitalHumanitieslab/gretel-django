@@ -1,4 +1,17 @@
-import { Component, Output, OnInit, OnDestroy, EventEmitter, Input, SimpleChanges, OnChanges } from '@angular/core';
+import {
+    Component,
+    ElementRef,
+    EventEmitter,
+    Input,
+    OnChanges,
+    OnDestroy,
+    OnInit,
+    Output,
+    QueryList,
+    SimpleChanges,
+    ViewChild,
+    ViewChildren
+} from '@angular/core';
 import { faDownload } from '@fortawesome/free-solid-svg-icons';
 import { Subscription } from 'rxjs';
 import { map, switchMap, distinctUntilChanged } from 'rxjs/operators';
@@ -63,6 +76,17 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
     @Input()
     public changes = 0;
 
+    @ViewChildren('padCell')
+    public padCells: QueryList<ElementRef<HTMLTableCellElement>>;
+
+    @ViewChild('thead', { static: true })
+    public thead: ElementRef<HTMLTableSectionElement>;
+
+    @ViewChild('tbody', { static: true })
+    public tbody: ElementRef<HTMLTableSectionElement>;
+
+    private headerPadding = 0;
+
     public totalHits = 0;
     public totalSentences = '?';
 
@@ -101,7 +125,7 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     ngOnDestroy() {
-        this.subscriptions.forEach(sub => sub.unsubscribe());
+        this.subscriptions.forEach(sub => sub?.unsubscribe());
         this.subscriptions = [];
     }
 
@@ -217,6 +241,8 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
         });
 
         this.totalSentences = totalSentenceCount.toLocaleString();
+
+        this.determineHeaderPadding();
     }
 
 
@@ -242,6 +268,8 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
         c.hidden = Object.values(c.components).every(comp => comp.hidden);
 
         this.emitHiddenComponents();
+
+        this.determineHeaderPadding();
     }
 
     public toggleAllComponents(provider: string, corpus: string, hidden: boolean) {
@@ -250,6 +278,8 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
         c.hidden = hidden;
 
         this.emitHiddenComponents();
+
+        this.determineHeaderPadding();
     }
 
     public trackByKey<T>(index: number, keyValue: KeyValue<T>) {
@@ -279,6 +309,41 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
             );
 
         this.downloadService.downloadDistributionList(counts);
+    }
+
+    /**
+     * Align the header text with the scrollable content.
+     * This is needed because the scrollbar makes the tbody smaller
+     * but the size of the thead is unaffected.
+     */
+    private determineHeaderPadding() {
+        // run after a small timeout
+        // this way changes in the layout can be taken into account
+        setTimeout(() => {
+            const rowWidth = (<HTMLTableRowElement>this.tbody?.nativeElement.children[0])?.offsetWidth;
+            const headWidth = this.thead?.nativeElement.offsetWidth;
+            const difference = headWidth - rowWidth;
+            if (difference === this.headerPadding) {
+                return;
+            }
+
+            this.headerPadding = difference;
+
+            this.padCells?.forEach((header) => {
+                const th = header.nativeElement;
+                if (!th.dataset.originalPadding) {
+                    th.dataset.originalPadding = window.getComputedStyle(th).paddingRight;
+                }
+
+                const originalPadding = th.dataset.originalPadding;
+
+                if (difference === 0) {
+                    th.style.paddingRight = originalPadding;
+                } else {
+                    th.style.paddingRight = `calc(${originalPadding} + ${difference}px)`;
+                }
+            });
+        }, 10);
     }
 
     private emitHiddenComponents() {
