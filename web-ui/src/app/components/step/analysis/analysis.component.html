@@ -10,7 +10,7 @@
             <grt-xpath-viewer [value]="xpath" [variables]="nodes" [selectedVariables]="selectedNodes"
                 (partClick)="nodeClick($event.variableName)"></grt-xpath-viewer>
             <p class="has-text-right">
-                <a class="button is-white mt-2" [ngClass]="{'is-invisible': selectedNodesCount < 1}" (click)="deselectNodes()">deselect nodes</a>
+                <a class="button is-secondary is-inverted mt-2" [ngClass]="{'is-invisible': selectedNodesCount < 1}" (click)="deselectNodes()">deselect nodes</a>
             </p>
         </div>
     </div>
@@ -36,7 +36,7 @@
             [selectedNodes]="selectedNodes" (displayChange)="treeDisplay = $event"
             (nodeClick)="nodeClick($event)"></grt-tree-visualizer>
         <p class="has-text-right">
-            <a class="mt-2 button is-white" [ngClass]="{'is-invisible': selectedNodesCount < 1}" (click)="deselectNodes()">deselect nodes</a>
+            <a class="button is-secondary is-inverted mt-2" [ngClass]="{'is-invisible': selectedNodesCount < 1}" (click)="deselectNodes()">deselect nodes</a>
         </p>
     </div>
 </div>
@@ -54,7 +54,7 @@
                 </div>
                 <div class="level-right">
                     <div class="buttons is-right">
-                        <div class="button" role="button" (click)="cancelVariable()">
+                        <div class="button is-secondary" role="button" (click)="cancelVariable()">
                             Cancel
                         </div>
                     </div>
@@ -83,7 +83,7 @@
                 </div>
                 <div class="level-right">
                     <div class="buttons is-right">
-                        <div class="button" role="button" (click)="cancelVariable()">
+                        <div class="button is-secondary" role="button" (click)="cancelVariable()">
                             Cancel
                         </div>
                         <div class="button is-primary" role="button" (click)="addVariable()">

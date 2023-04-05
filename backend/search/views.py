@@ -222,9 +222,6 @@ def search_view(request):
     if data.get('retrieveContext'):
         results = query.augment_with_context(results)
 
-    if data.get('retrieveContext'):
-        results = query.augment_with_context(results)
-
     # serialize results
     results = [result.as_dict() for result in results]
 

@@ -310,7 +310,7 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
     private defaultPivot() {
         // Show a default pivot using the first node variable's lemma property against the POS property.
         // This way the user will get to see some useable values to help clarify the interface.
-        const nodes = Object.keys(this.nodes).map(key => this.nodes[key]);
+        const nodes = Object.values(this.nodes);
         if (nodes.length > 0) {
             const firstNode = nodes[nodes.length > 1 ? 1 : 0];
             this.selectedVariablesSubject.next([{

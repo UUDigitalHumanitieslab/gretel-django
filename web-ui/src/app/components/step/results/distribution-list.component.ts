@@ -135,13 +135,13 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
         // updateCorpus will set this to true if anything is still loading
         this.loading = false;
         const providers = new Set([
-            ...Object.getOwnPropertyNames(this.incomingCounts),
-            ...Object.getOwnPropertyNames(this.state),
+            ...Object.keys(this.incomingCounts),
+            ...Object.keys(this.state),
         ]);
         for (const provider of providers) {
             const corpora = new Set([
-                ...Object.getOwnPropertyNames(this.incomingCounts[provider]),
-                ...Object.getOwnPropertyNames(this.state[provider] ?? {})
+                ...Object.keys(this.incomingCounts[provider]),
+                ...Object.keys(this.state[provider] ?? {})
             ]);
 
             for (const corpus of corpora) {
@@ -158,7 +158,7 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
     private updateCorpus(provider: string, corpus: string) {
         let corpusHits = undefined;
         const emptyComponents = new Set([
-            ...Object.getOwnPropertyNames(
+            ...Object.keys(
                 (this.state[provider] ?? {})[corpus]?.components ?? {})
         ]);
         const components = (this.incomingCounts[provider] ?? {})[corpus] ?? [];
