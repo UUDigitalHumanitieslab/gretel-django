@@ -17,24 +17,24 @@
     </div>
 </h2>
 <table class="table is-fullwidth scroll has-text-left">
-    <thead>
+    <thead #thead>
         <tr>
-            <th>
+            <th scope="col">
                 <!-- disabled checkbox to align precisely with the other checkboxes-->
                 <label class="checkbox">
                     <input type="checkbox" style="visibility: hidden" disabled />
                 </label>
                 Name
             </th>
-            <th>Hits</th>
-            <th>All Sentences</th>
+            <th scope="col" class="has-text-right" #padCell>Hits</th>
+            <th scope="col" class="has-text-right" #padCell>All Sentences</th>
         </tr>
     </thead>
-    <tbody>
-        <ng-container *ngFor="let provider of state | keyvalue">
-            <ng-container *ngFor="let corpus of provider.value | keyvalue">
+    <tbody #tbody>
+        <ng-container *ngFor="let provider of state | keyvalue; trackBy: trackByKey">
+            <ng-container *ngFor="let corpus of provider.value | keyvalue; trackBy: trackByKey">
                 <tr>
-                    <th>
+                    <th scope="row">
                         <label class="checkbox">
                             <input
                                 type="checkbox"
@@ -43,11 +43,14 @@
                             /> {{corpus.key}}
                         </label>
                     </th>
-                    <th>{{corpus.value.hits != null ? corpus.value.hits.toLocaleString() : 'loading...'}}</th>
-                    <th>{{corpus.value.sentenceCount}}</th>
+                    <th class="has-text-right">
+                        <span class="icon is-loading" *ngIf="corpus.value.loading"></span>
+                        {{corpus.value.hits | transitionNumbers}}
+                    </th>
+                    <th class="has-text-right">{{corpus.value.sentenceCount}}</th>
                 </tr>
                 <ng-container *ngIf="!corpus.value.hidden">
-                    <tr *ngFor="let component of corpus.value.components | keyvalue">
+                    <tr *ngFor="let component of corpus.value.components | keyvalue; trackBy: trackByKey">
                         <td>
                             &nbsp; &nbsp; <label class="checkbox">
                                 <input
@@ -57,8 +60,11 @@
                                 /> {{component.value.title}}
                             </label>
                         </td>
-                        <td>{{component.value.hits != null ? component.value.hits.toLocaleString() : 'loading...'}}</td>
-                        <td>{{component.value.sentenceCount}}</td>
+                        <td class="has-text-right">
+                            <span class="icon is-loading" *ngIf="component.value.loading"></span>
+                            <ng-container *ngIf="component.value.hits !== undefined">{{component.value.hits | transitionNumbers}}</ng-container>
+                        </td>
+                        <td class="has-text-right">{{component.value.sentenceCount}}</td>
                     </tr>
                 </ng-container>
                 <tr></tr>
@@ -68,8 +74,11 @@
     <tfoot>
         <tr>
             <td></td>
-            <td>{{totalHits.toLocaleString()}}</td>
-            <td>{{totalSentences}}</td>
+            <td class="has-text-right" #padCell>
+                <span class="icon is-loading" *ngIf="loading"></span>
+                {{totalHits | transitionNumbers}}
+            </td>
+            <td class="has-text-right" #padCell>{{totalSentences}}</td>
         </tr>
     </tfoot>
 </table>

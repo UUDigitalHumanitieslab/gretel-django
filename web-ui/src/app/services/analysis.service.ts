@@ -1,9 +1,13 @@
 import { Injectable } from '@angular/core';
 
-import { XPathAttributes } from 'lassy-xpath';
+import { PathVariable, XPathAttributes } from 'lassy-xpath';
 import * as _ from 'lodash';
 
 import { Hit } from './results.service';
+
+// use three spaces, this way values can be split
+// even if values themselves might contain spaces
+const valueSeparator = '   ';
 
 @Injectable()
 export class AnalysisService {
@@ -11,6 +15,50 @@ export class AnalysisService {
      * If a value is missing for a column, this value is used instead.
      */
     public static placeholder = '(none)';
+
+    public joinValues(values: string[]): string {
+        return values.join(valueSeparator);
+    }
+
+    public splitValues(values: string): string[] {
+        return values.split(valueSeparator);
+    }
+
+    /**
+     * Creates variable ID representing concatenating attributes
+     * from multiple nodes.
+     * @param nodes Nodes to select
+     * @param attribute The attribute to read from each selected node
+     * @returns
+     */
+    public joinNodesVariableId(nodes: string[] | PathVariable[], attribute: string = undefined): string {
+        let nodeNames: string[];
+        if (typeof nodes[0] === 'string') {
+            nodeNames = <string[]>nodes;
+        } else {
+            nodeNames = (<PathVariable[]>nodes).map(node => node.name);
+        }
+
+        // sort by number (e.g. $node1 before $node2)
+        // and make sure $node (without number) is first
+        nodeNames.sort((a, b) => parseInt('0' + a.replace(/\D*/, '')) - parseInt('0' + b.replace(/\D*/, '')));
+
+        const variable = nodeNames.join(';');
+        if (attribute) {
+            return `${variable}.${attribute}`;
+        } else {
+            return variable;
+        }
+    }
+
+    public splitNodesVariableId(variable: string) {
+        const [nodes, attribute] = variable.split('.');
+        const nodeNames = nodes.split(';');
+        return {
+            nodeNames,
+            attribute
+        };
+    }
 
     private getRow(variables: { [name: string]: string[] }, metadataKeys: string[], result: Hit): Row {
         const metadataValues: { [name: string]: string } = {};
@@ -20,10 +68,16 @@ export class AnalysisService {
 
         const nodeVariableValues: { [name: string]: NodeProperties } = {};
         for (const name of Object.keys(variables)) {
-            const node = result.variableValues[name];
             const values: { [attribute: string]: string } = {};
+            const nodeNames = name.split(';');
             for (const attribute of variables[name]) {
-                values[attribute] = node && node[attribute] || AnalysisService.placeholder;
+                const combinedValues: string[] = [];
+                for (const nodeName of nodeNames) {
+                    const node = result.variableValues[nodeName];
+                    combinedValues.push(node && node[attribute] || AnalysisService.placeholder);
+                }
+
+                values[attribute] = this.joinValues(combinedValues);
             }
             nodeVariableValues[name] = values;
         }
@@ -33,15 +87,17 @@ export class AnalysisService {
 
     /**
      * Gets the attributes found in the hits for a path variable.
-     * @param variableName Name of the path variable.
+     * @param nodeNames Names of the path variables.
      * @param hits The results to search.
      */
-    public getVariableAttributes(variableName: string, hits: Hit[]) {
+    public getNodeAttributes(nodeNames: string[], hits: Hit[]) {
         const availableAttrs: { [key: string]: true } = {};
         for (const hit of hits) {
-            const values = Object.keys(hit.variableValues[variableName]).filter(a => a !== 'name');
-            for (const value of values) {
-                availableAttrs[value] = true;
+            for (const nodeName of nodeNames) {
+                const values = Object.keys(hit.variableValues[nodeName]).filter(a => a !== 'name');
+                for (const value of values) {
+                    availableAttrs[value] = true;
+                }
             }
         }
 

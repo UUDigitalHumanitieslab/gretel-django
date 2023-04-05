@@ -61,7 +61,8 @@
         .tv-content-wrapper {
             width: 100%;
             height: 100%;
-            background: #f7f7f7;
+            // same color as xpath query background
+            background: $pre-background;
             display: flex;
             flex-direction: column;
             border-radius: 4px;
@@ -239,10 +240,25 @@
                         }
                     }
 
-                    &.hovered {
+                    &.hovered,
+                    &.selected.hovered {
                         border-color: rgba(0, 0, 0, 0);
                         background: $tree_hovered;
                         color: #FFF !important;
+                    }
+
+                    &.selected {
+                        border-color: rgba(0, 0, 0, 0) !important;
+                        background: $tree_selected;
+
+                        &,
+                        span {
+                            color: #FFF !important;
+                        }
+
+                        &:hover {
+                            background: darken($tree_selected, 20%);
+                        }
                     }
 
                     &.hovered+ol li.highlight a span:nth-child(2),
@@ -409,11 +425,13 @@
         }
     }
 
+    // fullscreen tree visualization
     .tree-visualizer-fs {
         position: fixed;
         top: 0;
         left: 0;
-        z-index: 110;
+        // higher than notifications
+        z-index: 210;
         display: none;
         padding: 24px;
         width: 100vw;

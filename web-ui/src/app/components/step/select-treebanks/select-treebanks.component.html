@@ -43,13 +43,13 @@
     <div class="level-right is-hidden-print">
         <div class="level-item">
             <div class="field">
-                <p class="control" (click)="prev.next()">
-                    <a class="button is-hidden-tablet" role="button" title="Previous">
+                <p class="control" (click)="prev.emit()">
+                    <a class="button is-secondary is-hidden-tablet" role="button" title="Previous">
                         <span class="icon ">
                             <fa-icon [icon]="faChevronLeft" aria-hidden="true"></fa-icon>
                         </span>
                     </a>
-                    <a class="button is-hidden-mobile" role="button">
+                    <a class="button is-secondary is-hidden-mobile" role="button">
                         <span class="is-hidden-mobile">Previous</span>
                     </a>
                 </p>
@@ -57,13 +57,13 @@
         </div>
         <div class="level-item">
             <div class="field">
-                <p class="control" (click)="next.next()">
-                    <a class="button is-hidden-tablet" role="button" title="Previous">
+                <p class="control" (click)="next.emit()">
+                    <a class="button is-secondary is-hidden-tablet" role="button" title="Previous">
                         <span class="icon">
                             <fa-icon [icon]="faChevronRight" aria-hidden="true"></fa-icon>
                         </span>
                     </a>
-                    <a class="button is-hidden-mobile" role="button">
+                    <a class="button is-primary is-hidden-mobile" role="button">
                         <span class="is-hidden-mobile">Next</span>
                     </a>
                 </p>

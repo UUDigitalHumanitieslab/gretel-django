@@ -63,7 +63,7 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
     public disabled = false;
     public stepType = StepType.Analysis;
 
-    public variables: { [name: string]: PathVariable; };
+    public nodes: { [name: string]: PathVariable; };
     public treeXml: string;
     public treeDisplay: TreeVisualizerDisplay = 'inline';
 
@@ -73,6 +73,8 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
     public hitsCount = 0;
 
     public selectedVariable?: SelectedVariable;
+    public selectedNodes: { [name: string]: boolean } = {};
+    public selectedNodesCount = 0;
 
     public get canShowMore() {
         return this.renderCount < this.hitsCount && !this.selectedVariable;
@@ -125,7 +127,7 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
         for (const subscription of this.subscriptions) {
             subscription.unsubscribe();
         }
-        this.cancellationToken.next();
+        this.cancellationToken.next({});
     }
 
     showMore() {
@@ -136,10 +138,30 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
         // Should never show warning
     }
 
+    nodeClick(nodeName: string) {
+        if (nodeName) {
+            this.selectedNodes = {
+                ...this.selectedNodes,
+                [nodeName]: !this.selectedNodes[nodeName]
+            };
+            this.selectedNodesCount = 0;
+            for (let selected of Object.values(this.selectedNodes)) {
+                if (selected) {
+                    this.selectedNodesCount++;
+                }
+            }
+        }
+    }
+
+    deselectNodes() {
+        this.selectedNodes = {};
+        this.selectedNodesCount = 0;
+    }
+
     private async initialize() {
         // TODO: on change
         const { variables, lookup } = this.parseService.extractVariables(this.xpath);
-        this.variables = lookup;
+        this.nodes = lookup;
         this.treeXml = this.reconstructorService.construct(variables, this.xpath);
 
         const metadata$ = this.state$.pipe(
@@ -187,10 +209,10 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
                         for (const prop of state.variableProperties) {
                             prop.enabled = false;
                             this.custom = true;
-                            this.selectedVariable = this.selectedVariable = {
+                            this.selectedVariable = {
                                 attribute: undefined,
                                 axis: 'row',
-                                variable: this.variables['$node']
+                                nodes: [this.nodes['$node']]
                             };
                         }
                     });
@@ -228,8 +250,17 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
                 }
             },
             helper: (event: Event) => {
-                const data = $(event.currentTarget).data();
-                const variable = data['variable'] || data['varname'];
+                let variable: string;
+                const selectedNodes = Object.entries(this.selectedNodes)
+                    .filter(([_, selected]) => selected)
+                    .map(([variable, _]) => variable);
+
+                if (selectedNodes.length) {
+                    variable = this.analysisService.joinNodesVariableId(selectedNodes);
+                } else {
+                    const data = $(event.currentTarget).data();
+                    variable = data['variable'] || data['varname'];
+                }
                 return $(`<li class="tag">${variable}</li>`).css('cursor', 'move');
             },
             revert: true
@@ -243,15 +274,16 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
     public async addVariable(customProperty?: AddNodeEvent) {
         const selectedVariable = this.selectedVariable;
         this.selectedVariable = undefined;
+        this.deselectNodes();
         const updateSelection = () => {
             this.pivotUiOptions[selectedVariable.axis === 'row' ? 'rows' : 'cols']
-                .push(`${selectedVariable.variable.name}.${selectedVariable.attribute}`);
+                .push(this.analysisService.joinNodesVariableId(selectedVariable.nodes, selectedVariable.attribute));
             this.selectedVariablesSubject.next(this.selectedVariablesSubject.value.concat([selectedVariable]));
         };
 
         if (customProperty) {
             this.hide();
-            selectedVariable.variable = this.variables[customProperty.node.name];
+            selectedVariable.nodes = [this.nodes[customProperty.node.name]];
             selectedVariable.attribute = customProperty.property;
 
             // we need to have results containing this new property
@@ -278,17 +310,17 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
     private defaultPivot() {
         // Show a default pivot using the first node variable's lemma property against the POS property.
         // This way the user will get to see some useable values to help clarify the interface.
-        const variables = Object.keys(this.variables).map(key => this.variables[key]);
-        if (variables.length > 0) {
-            const firstVariable = variables[variables.length > 1 ? 1 : 0];
+        const nodes = Object.values(this.nodes);
+        if (nodes.length > 0) {
+            const firstNode = nodes[nodes.length > 1 ? 1 : 0];
             this.selectedVariablesSubject.next([{
                 attribute: 'pt',
                 axis: 'row',
-                variable: firstVariable
+                nodes: [firstNode]
             }, {
                 attribute: 'lemma',
                 axis: 'col',
-                variable: firstVariable
+                nodes: [firstNode]
             }]);
 
             const utils = $.pivotUtilities;
@@ -305,8 +337,8 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
                     'First': utils.aggregators['First'],
                     'Last': utils.aggregators['Last']
                 },
-                rows: [firstVariable.name + '.pt'],
-                cols: [firstVariable.name + '.lemma'],
+                rows: [firstNode.name + '.pt'],
+                cols: [firstNode.name + '.lemma'],
                 renderer: heatmap,
                 renderers,
                 onRefresh: (data) => {
@@ -335,7 +367,7 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
     }
 
     private showVariableToAdd(helper: JQuery<HTMLElement>, axis: 'row' | 'col') {
-        const variableName = helper.text().trim();
+        const { nodeNames } = this.analysisService.splitNodesVariableId(helper.text().trim());
         const offset = $('.pvtRendererArea').offset();
         this.top = offset.top;
         this.left = offset.left;
@@ -343,7 +375,7 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
         helper.remove();
 
         // only work with available attributes
-        const attributes = this.analysisService.getVariableAttributes(variableName, this.hitsSubject.value);
+        const attributes = this.analysisService.getNodeAttributes(nodeNames, this.hitsSubject.value);
 
         this.ngZone.run(() => {
             // show the window to add a new variable for analysis
@@ -354,7 +386,7 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
             this.selectedVariable = {
                 attribute: values.find(v => v === 'pt') || values.find(v => v === 'cat') || values[0],
                 axis,
-                variable: this.variables[variableName]
+                nodes: nodeNames.map(name => this.nodes[name])
             };
         });
     }
@@ -376,9 +408,12 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
 
     private pivot(metadataKeys: string[], hits: Hit[], selectedVariables: SelectedVariable[]) {
         const variables = selectedVariables.reduce((grouped, s) => {
-            grouped[s.variable.name]
-                ? grouped[s.variable.name].push(s.attribute)
-                : grouped[s.variable.name] = [s.attribute];
+            const name = this.analysisService.joinNodesVariableId(s.nodes);
+            if (grouped[name]) {
+                grouped[name].push(s.attribute);
+            } else {
+                grouped[name] = [s.attribute]
+            }
             return grouped;
         }, {} as { [variableName: string]: string[] });
         this.renderCount = hits.length;
@@ -437,9 +472,19 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
                     break;
                 }
             }
-            results[id] = id[0] !== '$'
-                ? this.getFilterValue(id, value)
-                : this.getFilterForQuery(id, value);
+            if (id[0] !== '$') {
+                results[id] = this.getFilterValue(id, value);
+            }
+            else {
+                const { nodeNames, attribute } = this.analysisService.splitNodesVariableId(id);
+                const values = this.analysisService.splitValues(value);
+                for (const i in nodeNames) {
+                    const node = nodeNames[i];
+                    const subValue = values[i];
+                    const subId = `${node}.${attribute}`;
+                    results[subId] = this.getFilterForQuery(node, attribute, subValue);
+                }
+            }
         }
         return results;
     }
@@ -449,14 +494,14 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
      * @param id The variable name representing part of the query and the attribute name
      * @param value The attribute value
      */
-    private getFilterForQuery(id: string, value: string): FilterByXPath {
-        const [variable, attribute] = id.split('.');
+    private getFilterForQuery(nodeName: string, attribute: string, value: string): FilterByXPath {
         return this.resultsService.getFilterForQuery(
-            variable,
+            nodeName,
             attribute,
             value === AnalysisService.placeholder
                 ? null
-                : value, this.variables);
+                : value,
+            this.nodes);
     }
 
     private getFilterValue(field: string, value: string): FilterValue {
@@ -588,6 +633,6 @@ export class AnalysisComponent extends StepDirective<GlobalState> implements OnI
 
 interface SelectedVariable {
     attribute: string;
-    variable: PathVariable;
+    nodes: PathVariable[];
     axis: 'row' | 'col';
 }

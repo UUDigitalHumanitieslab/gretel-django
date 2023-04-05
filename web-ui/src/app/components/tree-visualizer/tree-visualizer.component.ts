@@ -79,8 +79,14 @@ export class TreeVisualizerComponent implements OnChanges, OnInit, AfterViewChec
     @Input()
     public loading = false;
 
+    @Input()
+    public selectedNodes: { [name: string]: boolean } = {};
+
     @Output()
     public displayChange = new EventEmitter<TreeVisualizerDisplay>();
+
+    @Output()
+    public nodeClick = new EventEmitter<string>();
 
     public metadata: Metadata[] | undefined;
     public showLoader: boolean;
@@ -104,6 +110,13 @@ export class TreeVisualizerComponent implements OnChanges, OnInit, AfterViewChec
         const element = $(this.output.nativeElement);
         if (changes.loading && this.loading) {
             this.showLoader = true;
+        }
+
+        if (changes.selectedNodes && this.instance) {
+            const selectedNodes = Object.entries(this.selectedNodes)
+                .filter(([_, selected]) => selected)
+                .map(([node, _]) => node);
+            this.instance.trigger('select-nodes', [selectedNodes]);
         }
 
         if (!this.loading && this.xml) {
@@ -142,11 +155,17 @@ export class TreeVisualizerComponent implements OnChanges, OnInit, AfterViewChec
                 showMatrixDetails: this.showMatrixDetails
             });
 
+            this.instance.on('node-selected', (event, data) => this.nodeSelected(event, data));
+
             this.parseService.parseXml(this.xml).then((data) => {
                 this.showMetadata(data);
             });
             this.updateVisibility();
         });
+    }
+
+    private nodeSelected(event: JQuery.Event, data: { varname: string }) {
+        this.nodeClick.emit(data.varname);
     }
 
     private updateVisibility() {

@@ -1,18 +1,37 @@
-import { Component, Output, OnInit, OnDestroy, EventEmitter, Input, SimpleChanges, OnChanges } from '@angular/core';
+import {
+    Component,
+    ElementRef,
+    EventEmitter,
+    Input,
+    OnChanges,
+    OnDestroy,
+    OnInit,
+    Output,
+    QueryList,
+    SimpleChanges,
+    ViewChild,
+    ViewChildren
+} from '@angular/core';
 import { faDownload } from '@fortawesome/free-solid-svg-icons';
-import { merge, from, Subscription, combineLatest, Notification } from 'rxjs';
-import { map, switchMap, materialize, startWith, endWith, distinctUntilChanged } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
+import { map, switchMap, distinctUntilChanged } from 'rxjs/operators';
 
-import { DownloadService, ResultCount, ResultsService, StateService, TreebankCount } from '../../../services/_index';
+import { DownloadService, ResultCount, StateService } from '../../../services/_index';
 import { Treebank, TreebankComponent, TreebankSelection, FuzzyNumber } from '../../../treebank';
 import { GlobalState } from '../../../pages/multi-step-page/steps';
-import { NotificationKind } from './notification-kind';
+
 interface ComponentState {
     title: string;
     hidden: boolean;
     sentenceCount: string;
+    loading: boolean;
     hits?: number;
     percentage?: number;
+}
+
+interface KeyValue<T> {
+    key: string,
+    value: T
 }
 
 @Component({
@@ -30,7 +49,7 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
         components: string[]
     }>();
 
-    public loading = true;
+    public loading = false;
 
     public state: {
         [provider: string]: {
@@ -57,6 +76,17 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
     @Input()
     public changes = 0;
 
+    @ViewChildren('padCell')
+    public padCells: QueryList<ElementRef<HTMLTableCellElement>>;
+
+    @ViewChild('thead', { static: true })
+    public thead: ElementRef<HTMLTableSectionElement>;
+
+    @ViewChild('tbody', { static: true })
+    public tbody: ElementRef<HTMLTableSectionElement>;
+
+    private headerPadding = 0;
+
     public totalHits = 0;
     public totalSentences = '?';
 
@@ -64,7 +94,6 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
 
     constructor(
         private downloadService: DownloadService,
-        private resultsService: ResultsService,
         private stateService: StateService<GlobalState>) {
     }
 
@@ -87,53 +116,91 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
                     xpath: state.xpath
                 };
             }));
-        const totals$ = components$.pipe(
-            switchMap(({ components, xpath }) => this.getTotals(components, xpath)));
-
-        const combined$ = combineLatest(components$, totals$);
 
         this.subscriptions = [
-            combined$.subscribe(([components, totals]) => {
-                if (typeof totals === 'string') {
-                    switch (totals) {
-                        case 'start': {
-                            this.recreateState(components.components);
-                            this.totalHits = 0;
-                            this.loading = true;
-                            break;
-                        }
-                        case 'finish': {
-                            this.loading = false;
-                        }
-                    }
-                } else {
-                    this.addTotals(totals.bank, totals.result);
-                }
+            components$.subscribe((components) => {
+                this.recreateState(components.components);
             }),
         ];
     }
 
     ngOnDestroy() {
-        this.subscriptions.forEach(sub => sub.unsubscribe());
+        this.subscriptions.forEach(sub => sub?.unsubscribe());
         this.subscriptions = [];
     }
 
     ngOnChanges(changes: SimpleChanges) {
         // Update counts based on data coming from ResultsComponent
-        let totalHits = 0;
-        for (const provider of Object.getOwnPropertyNames(this.incomingCounts)) {
-            for (const treebank of Object.getOwnPropertyNames(this.incomingCounts[provider])) {
-                let treebankhits = 0;
-                for (const resultcount of this.incomingCounts[provider][treebank]) {
-                    treebankhits += resultcount.numberOfResults;
-                    this.state[provider][treebank].components[resultcount.component].hits = resultcount.numberOfResults;
-                    this.state[provider][treebank].components[resultcount.component].percentage = resultcount.percentage;
+        let totalHits = undefined;
+        // updateCorpus will set this to true if anything is still loading
+        this.loading = false;
+        const providers = new Set([
+            ...Object.keys(this.incomingCounts),
+            ...Object.keys(this.state),
+        ]);
+        for (const provider of providers) {
+            const corpora = new Set([
+                ...Object.keys(this.incomingCounts[provider]),
+                ...Object.keys(this.state[provider] ?? {})
+            ]);
+
+            for (const corpus of corpora) {
+                const corpusHits = this.updateCorpus(provider, corpus);
+                if (corpusHits !== undefined) {
+                    totalHits = (totalHits ?? 0) + corpusHits;
                 }
-                this.state[provider][treebank].hits = treebankhits;
-                totalHits += treebankhits;
             }
         }
+
         this.totalHits = totalHits;
+    }
+
+    private updateCorpus(provider: string, corpus: string) {
+        let corpusHits = undefined;
+        const emptyComponents = new Set([
+            ...Object.keys(
+                (this.state[provider] ?? {})[corpus]?.components ?? {})
+        ]);
+        const components = (this.incomingCounts[provider] ?? {})[corpus] ?? [];
+        let loading = false;
+        for (const resultCount of components) {
+            corpusHits = (corpusHits ?? 0) + resultCount.numberOfResults;
+            this.updateComponent(provider, corpus, resultCount.component, {
+                loading: !resultCount.completed,
+                hits: resultCount.numberOfResults,
+                percentage: resultCount.percentage
+            });
+            if (!resultCount.completed) {
+                loading = true;
+            }
+            emptyComponents.delete(resultCount.component);
+        }
+
+        this.state[provider][corpus].hits = corpusHits;
+        for (const component of emptyComponents) {
+            loading = true;
+            this.updateComponent(provider, corpus, component, {
+                loading: true,
+                hits: undefined,
+                percentage: undefined
+            });
+        }
+        this.state[provider][corpus].loading = loading;
+        if (loading) {
+            this.loading = true;
+        }
+        return corpusHits;
+    }
+
+    private updateComponent(provider: string, corpus: string, component: string, update:
+        {
+            loading: boolean,
+            hits?: number,
+            percentage?: number
+        }) {
+        this.state[provider][corpus].components[component].loading = update.loading;
+        this.state[provider][corpus].components[component].hits = update.hits;
+        this.state[provider][corpus].components[component].percentage = update.percentage;
     }
 
     private recreateState(entries: Array<{ bank: Treebank, components: TreebankComponent[] }>) {
@@ -164,6 +231,7 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
                 b.components[c.id] = {
                     hidden: false,
                     hits: undefined,
+                    loading: true,
                     sentenceCount: c.sentenceCount.toLocaleString(),
                     title: c.title
                 };
@@ -173,29 +241,10 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
         });
 
         this.totalSentences = totalSentenceCount.toLocaleString();
+
+        this.determineHeaderPadding();
     }
 
-    private addTotals(bank: Treebank, t: Notification<TreebankCount[]>) {
-        switch (t.kind) {
-            case NotificationKind.COMPLETE: {
-                this.state[bank.provider][bank.id].loading = false;
-                return;
-            }
-            case NotificationKind.ERROR: {
-                this.state[bank.provider][bank.id].error = t.error;
-                this.state[bank.provider][bank.id].loading = false;
-                return;
-            }
-            case NotificationKind.NEXT: {
-                const b = this.state[bank.provider][bank.id];
-                t.value.forEach(v => {
-                    b.components[v.componentId].hits = v.count;
-                    b.hits = (b.hits || 0) + v.count;
-                    this.totalHits += v.count;
-                });
-            }
-        }
-    }
 
     /** Return a more easily usable set of all selected treebanks/components */
     private async getComponents(selection: TreebankSelection): Promise<{
@@ -213,43 +262,14 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
         }));
     }
 
-    private getTotals(
-        banks: { bank: Treebank, components: TreebankComponent[] }[],
-        xpath: string
-    ) {
-        // create a request for each bank
-        const requests = banks.map(({ bank, components }) =>
-            // turn response promise into stream again
-            from(this.resultsService.treebankCounts(
-                xpath,
-                bank.provider,
-                bank.id,
-                components.map(c => c.id),
-            ))
-                .pipe(
-                    // transform errors for this bank into normal notification
-                    // to prevent merged stream from dying if one bank fails
-                    materialize(),
-                    // results don't include the origin bank, so re-attach the bank so we know where they originated
-                    map(result => ({
-                        result,
-                        bank
-                    }))
-                )
-        );
-
-        return merge(...requests).pipe(
-            startWith('start'),
-            endWith('finish')
-        );
-    }
-
     public toggleComponent(provider: string, corpus: string, componentId: string, hidden: boolean) {
         const c = this.state[provider][corpus];
         c.components[componentId].hidden = hidden;
         c.hidden = Object.values(c.components).every(comp => comp.hidden);
 
         this.emitHiddenComponents();
+
+        this.determineHeaderPadding();
     }
 
     public toggleAllComponents(provider: string, corpus: string, hidden: boolean) {
@@ -258,6 +278,12 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
         c.hidden = hidden;
 
         this.emitHiddenComponents();
+
+        this.determineHeaderPadding();
+    }
+
+    public trackByKey<T>(index: number, keyValue: KeyValue<T>) {
+        return keyValue.key;
     }
 
     public download() {
@@ -283,6 +309,41 @@ export class DistributionListComponent implements OnInit, OnDestroy, OnChanges {
             );
 
         this.downloadService.downloadDistributionList(counts);
+    }
+
+    /**
+     * Align the header text with the scrollable content.
+     * This is needed because the scrollbar makes the tbody smaller
+     * but the size of the thead is unaffected.
+     */
+    private determineHeaderPadding() {
+        // run after a small timeout
+        // this way changes in the layout can be taken into account
+        setTimeout(() => {
+            const rowWidth = (<HTMLTableRowElement>this.tbody?.nativeElement.children[0])?.offsetWidth;
+            const headWidth = this.thead?.nativeElement.offsetWidth;
+            const difference = headWidth - rowWidth;
+            if (difference === this.headerPadding) {
+                return;
+            }
+
+            this.headerPadding = difference;
+
+            this.padCells?.forEach((header) => {
+                const th = header.nativeElement;
+                if (!th.dataset.originalPadding) {
+                    th.dataset.originalPadding = window.getComputedStyle(th).paddingRight;
+                }
+
+                const originalPadding = th.dataset.originalPadding;
+
+                if (difference === 0) {
+                    th.style.paddingRight = originalPadding;
+                } else {
+                    th.style.paddingRight = `calc(${originalPadding} + ${difference}px)`;
+                }
+            });
+        }, 10);
     }
 
     private emitHiddenComponents() {

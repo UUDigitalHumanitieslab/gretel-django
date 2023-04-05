@@ -1,5 +1,7 @@
 // same opacity as the tree overlay
 $pageloader-opacity: 0.6;
+$scrollbar-width: 0.75em;
+
 @import "colors";
 @import "pivottable/dist/pivot.css";
 @import "bulma/bulma";
@@ -39,6 +41,24 @@ $pageloader-opacity: 0.6;
     }
 }
 
+
+::-webkit-scrollbar {
+    height: $scrollbar-width;
+    width: $scrollbar-width;
+}
+
+::-webkit-scrollbar-track {
+    background: $grey-lightest;
+}
+
+::-webkit-scrollbar-thumb {
+    background: $secondary;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: bulmaDarken($secondary, 2.5%);
+}
+
 .pageloader {
     transition: none;
     opacity: 0;
@@ -47,6 +67,10 @@ $pageloader-opacity: 0.6;
         transition: transform 0s ease, opacity .35s ease-out;
         opacity: 1;
     }
+}
+
+.modal {
+    z-index: 501;
 }
 
 .is-loading {

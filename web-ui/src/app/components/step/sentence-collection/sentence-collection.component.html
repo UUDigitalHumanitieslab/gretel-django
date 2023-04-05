@@ -14,7 +14,7 @@
     </div>
 </form>
 
-<div *ngIf="count() == 0" class="block">
+<div *ngIf="count() === 0" class="block">
     <p class="mt-3">The query "{{ filterString }}" does not match a known multiword expression.</p>
     <p class="mt-3">To search for <strong>{{ filterString }}</strong> as an expression,
         <a (click)="onSelect.emit({text: filterString})">click here</a>.
@@ -24,7 +24,7 @@
 
 <div *ngIf="count() > 0">
     <div class="block mt-3">
-        Showing {{ visible() }} out of {{ count() }} matching known expressions:
+        Showing {{ visible() | transitionNumbers:true }} out of {{ count() | transitionNumbers:true }} matching known expressions:
     </div>
     <table class="table is-fullwidth">
         <tr *ngFor="let sent of sentences"

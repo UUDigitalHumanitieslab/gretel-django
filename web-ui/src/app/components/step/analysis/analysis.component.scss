@@ -32,7 +32,12 @@
         // style the xpath display to mark the draggable nodes
         .node-name {
             background: rgba($primary, 0);
-            transition: background-color ease 1s;
+            transition: background-color ease 0.2s;
+
+            &.is-selected {
+                background: $secondary;
+                color: white !important;
+            }
         }
 
         .ui-draggable {

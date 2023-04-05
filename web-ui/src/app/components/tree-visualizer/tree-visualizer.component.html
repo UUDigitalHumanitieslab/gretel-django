@@ -1,6 +1,6 @@
 <div class="pageloader is-black" [ngClass]="{'is-active':showLoader}"><span class="title">Loading tree...</span></div>
 <div #output>
-    <div #inline class="tree-visualizer tv" *ngIf="display != 'fullscreen'">
+    <div #inline class="tree-visualizer tv" *ngIf="display !== 'fullscreen'">
         <div class="tv-error">
             <p></p>
         </div>
@@ -19,7 +19,7 @@
             <div class="tv-tree" #tree>
             </div>
 
-            <aside class="tv-tooltip" style="display: none">
+            <aside class="tv-tooltip" style="display: none" aria-label="">
                 <ul></ul>
                 <button grtBalloonPosition="up" grtBalloon="Close this tooltip" type="button">
                     <fa-icon [icon]="faTimes" aria-hidden="true"></fa-icon>
@@ -109,7 +109,7 @@
             <ng-container *ngTemplateOutlet="metadataTemplate"></ng-container>
             <div class="tv-tree" #tree>
             </div>
-            <aside class="tv-tooltip" style="display: none">
+            <aside class="tv-tooltip" style="display: none" aria-label="">
                 <ul></ul>
                 <button grtBalloonPosition="up" grtBalloon="Close this tooltip" type="button">
                     <fa-icon [icon]="faTimes" aria-hidden="true"></fa-icon>

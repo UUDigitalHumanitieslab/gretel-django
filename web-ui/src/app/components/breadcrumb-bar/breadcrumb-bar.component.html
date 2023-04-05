@@ -1,12 +1,12 @@
 <nav class="breadcrumb is-hidden-print has-succeeds-separator" aria-label="breadcrumbs">
     <ul>
         <ng-container *ngFor="let crumb of crumbs">
-            <li *ngIf="crumb.number == currentCrumb" class="no-hover is-active">
+            <li *ngIf="crumb.number === currentCrumb" class="no-hover is-active">
                 <a (click)="jump.next(crumb.number)">{{crumb.name}}</a>
             </li>
-            <li *ngIf="crumb.number != currentCrumb" class="no-hover">
+            <li *ngIf="crumb.number !== currentCrumb" class="no-hover">
                 <a (click)="jump.next(crumb.number)" aria-current="page">{{crumb.name}}</a>
             </li>
-        </ng-container>        
+        </ng-container>
     </ul>
 </nav>

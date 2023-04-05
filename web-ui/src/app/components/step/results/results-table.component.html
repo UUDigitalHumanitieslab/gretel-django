@@ -16,7 +16,7 @@
             </div>
             <div class="level-item">
                 <h1 class="title" [ngClass]="{'is-loading': loading}" grtSubtitle>
-                    Results: {{filteredResults.length - hiddenCount}}<ng-container *ngIf="hiddenCount > 0"> ({{hiddenCount}}
+                    Results: {{filteredResults.length - hiddenCount | transitionNumbers}}<ng-container *ngIf="hiddenCount > 0"> ({{hiddenCount | transitionNumbers}}
                         hidden)
                     </ng-container>
                 </h1>
@@ -28,12 +28,12 @@
             <div class="level-item">
                 <div class="field">
                     <p class="control" (click)="prev.emit()">
-                        <a class="button is-hidden-tablet" role="button" title="Previous">
+                        <a class="button is-secondary is-hidden-tablet" role="button" title="Previous">
                             <span class="icon ">
                                 <fa-icon [icon]="faChevronLeft" aria-hidden="true"></fa-icon>
                             </span>
                         </a>
-                        <a class="button is-hidden-mobile" role="button">
+                        <a class="button is-secondary is-hidden-mobile" role="button">
                             <span class="is-hidden-mobile">Previous</span>
                         </a>
                     </p>
@@ -88,12 +88,12 @@
             <div class="level-item">
                 <div class="field">
                     <p class="control" (click)="next.emit()">
-                        <a class="button is-hidden-tablet" role="button" title="Previous">
+                        <a class="button is-secondary is-hidden-tablet" role="button" title="Previous">
                             <span class="icon ">
                                 <fa-icon [icon]="faChevronRight" aria-hidden="true"></fa-icon>
                             </span>
                         </a>
-                        <a class="button is-hidden-mobile" role="button">
+                        <a class="button is-primary is-hidden-mobile" role="button">
                             <span class="is-hidden-mobile">Next</span>
                         </a>
                     </p>
@@ -119,7 +119,7 @@
     </div>
     <div class="column">
         <p-table *ngIf="filteredResults.length > hiddenCount else warning" [columns]="columns" [value]="filteredResults"
-            [resizableColumns]="true" styleClass="bulma">
+            [resizableColumns]="true" responsiveLayout="stack" styleClass="bulma">
             <ng-template pTemplate="header" let-columns>
                 <tr>
                     <th *ngFor="let col of columns" pResizableColumn [style.width]="col.width">
@@ -130,7 +130,8 @@
             <ng-template pTemplate="body" let-rowData let-columns="columns" let-i="rowIndex">
                 <tr *ngIf="!rowData.hidden" [@fade]>
                     <td *ngFor="let col of columns" class="p-resizable-column">
-                        <div [ngSwitch]="col.field">
+                        <span *ngIf="col.field !== 'highlightedSentence'" class="p-column-title">{{col.header}}</span>
+                        <ng-container [ngSwitch]="col.field">
                             <span *ngSwitchCase="'number'">{{i + 1}}</span>
 
                             <ng-container *ngSwitchCase="'fileId'">
@@ -145,11 +146,10 @@
                                 <span *ngIf="retrieveContext" class="content is-small">{{rowData['previousSentence']}} </span>
                                 <span [innerHTML]="rowData['highlightedSentence']"></span>
                                 <span *ngIf="retrieveContext" class="content is-small"> {{rowData['nextSentence']}}</span>
-                                
                             </ng-container>
 
                             <span [innerHTML]="rowData[col.field]" *ngSwitchDefault></span>
-                        </div>
+                        </ng-container>
                     </td>
                 </tr>
             </ng-template>

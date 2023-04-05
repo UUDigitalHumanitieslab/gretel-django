@@ -361,25 +361,25 @@ export class ResultsService {
 
     /**
      * Gets filters for an extracted xpath query
-     * @param variable The variable name of the node.
+     * @param nodeName The variable name of the node.
      * @param attribute The attribute of that node to filter
      * @param value The attribute value (or null for not filtering)
      * @param value The available variables
      */
     public getFilterForQuery(
-        variable: string,
+        nodeName: string,
         attribute: string,
         value: string,
-        variables: { [name: string]: PathVariable }): FilterByXPath {
+        nodes: { [name: string]: PathVariable }): FilterByXPath {
         const attrSelector = value
             ? `@${attribute}="${value}"`
             : `@${attribute}="" or not(@${attribute})`;
         return {
-            field: `${variable}.${attribute}`,
-            label: `${variable}[${attrSelector}]`,
+            field: `${nodeName}.${attribute}`,
+            label: `${nodeName}[${attrSelector}]`,
             type: 'xpath',
-            location: variables[variable].location,
-            contextXpath: this.resolveRootPath(variables, variable),
+            location: nodes[nodeName].location,
+            contextXpath: this.resolveRootPath(nodes, nodeName),
             attributeXpath: `[${attrSelector}]`
         };
     }
