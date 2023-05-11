@@ -11,7 +11,8 @@ $scrollbar-width: 0.75em;
 
 [aria-label][data-balloon-pos]:after {
     z-index: 500;
-    white-space: nowrap !important;
+    // make sure balloons can be shown in multiple lines
+    white-space: normal !important;
 }
 
 @import "material";
