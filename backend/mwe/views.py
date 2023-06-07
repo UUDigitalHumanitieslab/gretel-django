@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 
 class CanonicalFormList(ListAPIView):
-    queryset = CanonicalForm.objects.all()
+    queryset = CanonicalForm.objects.all().order_by('dcmid')
     serializer_class = CanonicalFormSerializer
 
 
