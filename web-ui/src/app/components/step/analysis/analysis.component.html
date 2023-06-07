@@ -70,7 +70,7 @@
             <br />
             <div class="field">
                 <ng-select [(ngModel)]="selectedVariable.attribute" required="true">
-                    <ng-option *ngFor="let attribute of attributes" [value]="attribute.value">
+                    <ng-option *ngFor="let attribute of nodeAttributes" [value]="attribute.value">
                         {{attribute.label}}
                     </ng-option>
                 </ng-select>
