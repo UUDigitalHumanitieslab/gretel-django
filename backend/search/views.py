@@ -177,7 +177,7 @@ def add_mwe_attributes(queries: List[str], result: Result):
     if nodes:
         hit = common_node_parent_multiple(nodes)
         hit_info = analyze_mwe_hit(hit, queries, result.tree)
-        result.attributes |= {
+        result.attributes.update({
             'mwe_arguments_heads_fringe': format_multi_mwe_attr(hit_info.arguments.heads, lambda head: head.fringe),
             'mwe_arguments_heads_hdword': format_multi_mwe_attr(hit_info.arguments.heads, lambda head: head.hdword),
             'mwe_arguments_heads_hdlemma': format_multi_mwe_attr(hit_info.arguments.heads, lambda head: head.hdlemma),
@@ -203,7 +203,7 @@ def add_mwe_attributes(queries: List[str], result: Result):
             'mwe_modifications_head_word': format_multi_mwe_attr(hit_info.modifications, lambda modification: modification.head_word),
             'mwe_modifications_node_cat': format_multi_mwe_attr(hit_info.modifications, lambda modification: modification.node_cat),
             'mwe_modifications_node_rel': format_multi_mwe_attr(hit_info.modifications, lambda modification: modification.node_rel),
-        }
+        })
 
 
 def mwe_include(queries: List[str]) -> Callable[[ResultSet], ResultSet]:
