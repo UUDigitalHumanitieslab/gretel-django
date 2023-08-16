@@ -355,10 +355,10 @@ class SearchQuery(models.Model):
 
         for result_obj in self._component_results():
             # Count completed part (for all results)
-            if result_obj.get_completed_part() is not None:
-                completed_part += result_obj.get_completed_part()
-                percentage = result_obj.get_completed_part() / \
-                    max(1, result_obj.component.total_database_size * 100)
+            part = result_obj.get_completed_part()
+            if part is not None:
+                completed_part += part
+                percentage = part / max(1, result_obj.component.total_database_size * 100)
                 counts.append({
                     'component': result_obj.component.slug,
                     'number_of_results': self._count_results(result_obj),
