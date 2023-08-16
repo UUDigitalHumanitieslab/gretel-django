@@ -65,9 +65,8 @@ class ComponentSearchResult(models.Model):
         return settings.CACHING_DIR / str(self.id)
 
     def check_results(self) -> bool:
-        cache_filename = str(self._get_cache_path(False))
         try:
-            cache_file = open(cache_filename, 'r')
+            self.get_results()
             return True
         except Exception:
             pass
@@ -82,6 +81,8 @@ class ComponentSearchResult(models.Model):
         except FileNotFoundError:
             # This can happen if search results are requested before
             # searching had started, and is not necessarily an error
+            if self.search_completed:
+                raise
             return []
 
         results = cache_file.read()
