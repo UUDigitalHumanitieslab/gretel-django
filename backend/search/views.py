@@ -30,10 +30,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def run_search(query_obj) -> None:
-    query_obj.perform_search()
-
-
 def _create_component_on_the_fly(component_slug: str, _treebank: str) -> None:
     '''Try to create a component object consisting of one database
     with the same name. Also create Treebank object if it does not yet

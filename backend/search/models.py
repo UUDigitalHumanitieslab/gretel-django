@@ -64,6 +64,16 @@ class ComponentSearchResult(models.Model):
                 raise SearchError('Could not create caching directory')
         return settings.CACHING_DIR / str(self.id)
 
+    def check_results(self) -> bool:
+        cache_filename = str(self._get_cache_path(False))
+        try:
+            cache_file = open(cache_filename, 'r')
+            return True
+        except Exception:
+            pass
+
+        return False
+
     def get_results(self) -> ResultSet:
         """Return results as a dict"""
         cache_filename = str(self._get_cache_path(False))
@@ -73,6 +83,7 @@ class ComponentSearchResult(models.Model):
             # This can happen if search results are requested before
             # searching had started, and is not necessarily an error
             return []
+
         results = cache_file.read()
         cache_file.close()
         self.last_accessed = timezone.now()
@@ -82,6 +93,11 @@ class ComponentSearchResult(models.Model):
         # of the model was not refreshed in the meantime.
         self.save(update_fields=['last_accessed'])
         return parse_search_result(results, self.component.slug)
+
+    def get_completed_part(self) -> Optional[int]:
+        if self.check_results():
+            return self.completed_part
+        return None
 
     def _truncate_results(self, results: str, number: int) -> str:
         matches = list(re.finditer('<match>', results))
@@ -339,9 +355,9 @@ class SearchQuery(models.Model):
 
         for result_obj in self._component_results():
             # Count completed part (for all results)
-            if result_obj.completed_part is not None:
-                completed_part += result_obj.completed_part
-                percentage = result_obj.completed_part / \
+            if result_obj.get_completed_part() is not None:
+                completed_part += result_obj.get_completed_part()
+                percentage = result_obj.get_completed_part() / \
                     max(1, result_obj.component.total_database_size * 100)
                 counts.append({
                     'component': result_obj.component.slug,
@@ -380,19 +396,32 @@ class SearchQuery(models.Model):
         result_objs = result_objs.order_by(F('completed_part').desc(nulls_first=True),
                                            'component__slug')
 
+        # append results that should be finished but can't be read
+        result_objs = [r for r in result_objs if r.check_results()] +\
+            [r for r in self.results.filter(search_completed__isnull=False) if not r.check_results()]
+
+        # loop through the linked ComponentSearchResults.
+        # for each component, we have to either run the query (perform_search)
+        # or read the results that were already collected (get_results)
         for result_obj in result_objs:
-            # Check if search has been completed by now by a concurrent
-            # search. If so, continue
             result_obj.refresh_from_db()
+            # if search has been completed, we expect to be able to read the results
             if result_obj.search_completed and not result_obj.errors:
-                continue
+                # kinda roundabout way to make sure the results are readable before skipping it
+                # make sure the results are accessible, because reading the cache might fail
+                if result_obj.check_results():
+                    # results are readable, skip the rest of the loop
+                    continue
             try:
                 result_obj.perform_search(self.id)
             except SearchError:
+                logger.error('Failed executing query for ComponentSearchResult (%d)', result_obj.pk)
                 raise
+
             # Check if search has been cancelled in the meantime
             self.refresh_from_db(fields=['cancelled'])
             if self.cancelled:
+                # skip the rest of the components
                 break
 
     def get_errors(self) -> str:
