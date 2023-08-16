@@ -6,6 +6,7 @@ from django.utils import timezone
 import lxml.etree as etree
 import tempfile
 import pathlib
+import os
 import shutil
 
 from treebanks.models import Treebank
@@ -338,3 +339,21 @@ class SearchQueryTestCase(TestCase):
             sq.perform_search()
             results = list(sq.get_results()[0])
             self.assertGreater(len(results), 0)
+
+    def test_read_before_search(self):
+        with self.settings(CACHING_DIR=test_cache_path):
+            # Make sure there are no results left from other tests
+            ComponentSearchResult.objects.all().delete()
+            for f in test_cache_path.glob('*'):
+                os.unlink(f)
+
+            # SQ with full treebank
+            sq = SearchQuery(xpath=XPATH1)
+            sq.save()
+            components = test_treebank.components.all()
+            sq.components.add(*components)
+            sq.initialize()
+
+            results = list(sq.get_results()[0])
+            # the test here is that nothing throws
+            self.assertEqual(len(results), 0)

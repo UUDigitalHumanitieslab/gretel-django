@@ -2,11 +2,12 @@ from django.db import models
 from django.utils import timezone
 from django.db.models import F, Sum
 from django.conf import settings
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
 from copy import deepcopy
 import logging
+import os
 import pathlib
 import re
 from datetime import timedelta
@@ -69,21 +70,14 @@ class ComponentSearchResult(models.Model):
             self.get_results()
             return True
         except Exception:
-            pass
+            logger.exception('Failed reading results of ComponentSearchQuery: %d', self.pk)
 
         return False
 
     def get_results(self) -> ResultSet:
         """Return results as a dict"""
         cache_filename = str(self._get_cache_path(False))
-        try:
-            cache_file = open(cache_filename, 'r')
-        except FileNotFoundError:
-            # This can happen if search results are requested before
-            # searching had started, and is not necessarily an error
-            if self.search_completed:
-                raise
-            return []
+        cache_file = open(cache_filename, 'r')
 
         results = cache_file.read()
         cache_file.close()
@@ -197,6 +191,9 @@ class ComponentSearchResult(models.Model):
         self.last_accessed = timezone.now()
         self.save()
 
+    def init_cache_file(self):
+        self._get_cache_path(False).touch()
+
     def delete_cache_file(self):
         """Delete the cache file belonging to this ComponentSearchResult.
         This method is called automatically on delete."""
@@ -256,6 +253,10 @@ class ComponentSearchResult(models.Model):
                            'space in cache, but cache is still larger than '
                            'maximum size.'.format(number_deleted))
 
+
+@receiver(post_save, sender=ComponentSearchResult)
+def component_search_result_create_callback(sender, instance, using, **kwargs):
+    instance.init_cache_file()
 
 @receiver(pre_delete, sender=ComponentSearchResult)
 def delete_basex_db_callback(sender, instance, using, **kwargs):
