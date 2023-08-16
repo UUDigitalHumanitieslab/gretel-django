@@ -6,6 +6,7 @@ from django.utils import timezone
 import lxml.etree as etree
 import tempfile
 import pathlib
+import shutil
 
 from treebanks.models import Treebank
 from services.basex import basex
@@ -310,3 +311,30 @@ class SearchQueryTestCase(TestCase):
         counts = sq.perform_count()
         self.assertEqual(counts['troonrede19'], 4)
         self.assertEqual(counts['troonrede20'], 3)
+
+
+    def test_missing_cache(self):
+        with self.settings(CACHING_DIR=test_cache_path):
+            ComponentSearchResult.objects.all().delete()
+            # SQ with full treebank
+            sq = SearchQuery(xpath=XPATH1)
+            sq.save()
+            components = test_treebank.components.all()
+            sq.components.add(*components)
+            sq.initialize()
+            sq.perform_search()
+            results = list(sq.get_results()[0])
+            self.assertGreater(len(results), 0)
+
+            # now run the same query, so that cache is used
+            # but first remove the cache files
+            shutil.rmtree(test_cache_path)
+
+            sq = SearchQuery(xpath=XPATH1)
+            sq.save()
+            components = test_treebank.components.all()
+            sq.components.add(*components)
+            sq.initialize()
+            sq.perform_search()
+            results = list(sq.get_results()[0])
+            self.assertGreater(len(results), 0)
