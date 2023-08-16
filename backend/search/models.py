@@ -388,17 +388,16 @@ class SearchQuery(models.Model):
         # completed yet, and starting with those that have not started yet
         # (because those for which search has already started may finish
         # early).
-        result_objs = self.results \
-            .filter(search_completed__isnull=True)
+        result_objs = self.results.filter(search_completed__isnull=True)
         # add failed result objects (with errors and no results)
         result_objs |= self.results.filter(number_of_results=0).exclude(errors=None).exclude(errors='')
 
         result_objs = result_objs.order_by(F('completed_part').desc(nulls_first=True),
                                            'component__slug')
 
-        # append results that should be finished but can't be read
-        result_objs = [r for r in result_objs if r.check_results()] +\
-            [r for r in self.results.filter(search_completed__isnull=False) if not r.check_results()]
+        result_objs = list(result_objs)
+        # append results that should be complete but can't be read
+        result_objs += [r for r in self.results.filter(search_completed__isnull=False) if not r.check_results()]
 
         # loop through the linked ComponentSearchResults.
         # for each component, we have to either run the query (perform_search)
