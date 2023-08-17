@@ -145,6 +145,8 @@ preshed==3.0.8
     #   thinc
 prompt-toolkit==3.0.39
     # via click-repl
+psycopg2==2.9.7
+    # via -r requirements.in
 pydantic==2.1.1
     # via
     #   confection
