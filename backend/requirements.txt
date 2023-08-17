@@ -238,8 +238,9 @@ tzdata==2023.3
     # via
     #   backports-zoneinfo
     #   celery
-urllib3==2.0.4
+urllib3==1.26.16
     # via
+    #   -r requirements.in
     #   django-revproxy
     #   requests
 vine==5.0.0

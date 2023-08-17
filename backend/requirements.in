@@ -10,3 +10,4 @@ BaseXClient
 alpino-query>=2.1.10
 celery[redis]>=5.2.0
 mwe-query>=0.0.4
+urllib3<=2.0.0
