@@ -390,14 +390,14 @@ class SearchQuery(models.Model):
         # completed yet, and starting with those that have not started yet
         # (because those for which search has already started may finish
         # early).
-        result_objs = self.results.filter(search_completed__isnull=True)
+        result_objs_query = self.results.filter(search_completed__isnull=True)
         # add failed result objects (with errors and no results)
-        result_objs |= self.results.filter(number_of_results=0).exclude(errors=None).exclude(errors='')
+        result_objs_query |= self.results.filter(number_of_results=0).exclude(errors=None).exclude(errors='')
 
-        result_objs = result_objs.order_by(F('completed_part').desc(nulls_first=True),
-                                           'component__slug')
+        result_objs_query = result_objs_query.order_by(F('completed_part').desc(nulls_first=True),
+                                                       'component__slug')
 
-        result_objs = list(result_objs)
+        result_objs = list(result_objs_query)
         # append results that should be complete but can't be read
         result_objs += [r for r in self.results.filter(search_completed__isnull=False) if not r.check_results()]
 
