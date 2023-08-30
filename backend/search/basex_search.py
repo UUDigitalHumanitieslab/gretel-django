@@ -18,6 +18,8 @@ ALLOWED_VARNAME_CHARS = string.ascii_letters + string.digits + '-_.'
 def check_xpath(xpath: str) -> bool:
     """Return True if a string is (only) a valid XPath, otherwise False."""
     try:
+        # for some reason ".." isn't being properly parsed. since it's an abbreviation for
+        # parent::node(), we can replace it ahead of time
         Parser(xpath.replace('..', 'parent::node()'), no_resolve=True)
         return True
     except:
