@@ -1,12 +1,14 @@
 """Auxiliary functions to facilitate searching in BaseX."""
 
 import lxml.etree
+import logging
 import string
 from io import StringIO
 from typing import List
-
+from xpyth_parser.parse import Parser
 from .types import BaseXMatch, Result
 
+log = logging.getLogger()
 
 ALLOWED_DBNAME_CHARS = string.ascii_letters + string.digits + \
     '!#$%&\'()+-=@[]^_`{}~.'
@@ -16,11 +18,12 @@ ALLOWED_VARNAME_CHARS = string.ascii_letters + string.digits + '-_.'
 def check_xpath(xpath: str) -> bool:
     """Return True if a string is (only) a valid XPath, otherwise False."""
     try:
-        lxml.etree.XPath(xpath)
-    except lxml.etree.XPathError:
-        return False
-    else:
+        Parser(xpath.replace('..', 'parent::node()'), no_resolve=True)
         return True
+    except:
+        log.exception('XPath parse exception')
+
+    return False
 
 
 def check_db_name(db_name: str) -> bool:
