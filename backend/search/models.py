@@ -2,11 +2,12 @@ from django.db import models
 from django.utils import timezone
 from django.db.models import F, Sum
 from django.conf import settings
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
 from copy import deepcopy
 import logging
+import os
 import pathlib
 import re
 from datetime import timedelta
@@ -64,15 +65,20 @@ class ComponentSearchResult(models.Model):
                 raise SearchError('Could not create caching directory')
         return settings.CACHING_DIR / str(self.id)
 
+    def check_results(self) -> bool:
+        try:
+            self.get_results()
+            return True
+        except Exception:
+            logger.exception('Failed reading results of ComponentSearchQuery: %d', self.pk)
+
+        return False
+
     def get_results(self) -> ResultSet:
         """Return results as a dict"""
         cache_filename = str(self._get_cache_path(False))
-        try:
-            cache_file = open(cache_filename, 'r')
-        except FileNotFoundError:
-            # This can happen if search results are requested before
-            # searching had started, and is not necessarily an error
-            return []
+        cache_file = open(cache_filename, 'r')
+
         results = cache_file.read()
         cache_file.close()
         self.last_accessed = timezone.now()
@@ -82,6 +88,11 @@ class ComponentSearchResult(models.Model):
         # of the model was not refreshed in the meantime.
         self.save(update_fields=['last_accessed'])
         return parse_search_result(results, self.component.slug)
+
+    def get_completed_part(self) -> Optional[int]:
+        if self.check_results():
+            return self.completed_part
+        return None
 
     def _truncate_results(self, results: str, number: int) -> str:
         matches = list(re.finditer('<match>', results))
@@ -180,6 +191,9 @@ class ComponentSearchResult(models.Model):
         self.last_accessed = timezone.now()
         self.save()
 
+    def init_cache_file(self):
+        self._get_cache_path(False).touch()
+
     def delete_cache_file(self):
         """Delete the cache file belonging to this ComponentSearchResult.
         This method is called automatically on delete."""
@@ -239,6 +253,10 @@ class ComponentSearchResult(models.Model):
                            'space in cache, but cache is still larger than '
                            'maximum size.'.format(number_deleted))
 
+
+@receiver(post_save, sender=ComponentSearchResult)
+def component_search_result_create_callback(sender, instance, using, **kwargs):
+    instance.init_cache_file()
 
 @receiver(pre_delete, sender=ComponentSearchResult)
 def delete_basex_db_callback(sender, instance, using, **kwargs):
@@ -339,10 +357,10 @@ class SearchQuery(models.Model):
 
         for result_obj in self._component_results():
             # Count completed part (for all results)
-            if result_obj.completed_part is not None:
-                completed_part += result_obj.completed_part
-                percentage = result_obj.completed_part / \
-                    max(1, result_obj.component.total_database_size * 100)
+            part = result_obj.get_completed_part()
+            if part is not None:
+                completed_part += part
+                percentage = part / max(1, result_obj.component.total_database_size * 100)
                 counts.append({
                     'component': result_obj.component.slug,
                     'number_of_results': self._count_results(result_obj),
@@ -372,27 +390,39 @@ class SearchQuery(models.Model):
         # completed yet, and starting with those that have not started yet
         # (because those for which search has already started may finish
         # early).
-        result_objs = self.results \
-            .filter(search_completed__isnull=True)
+        result_objs_query = self.results.filter(search_completed__isnull=True)
         # add failed result objects (with errors and no results)
-        result_objs |= self.results.filter(number_of_results=0).exclude(errors=None).exclude(errors='')
+        result_objs_query |= self.results.filter(number_of_results=0).exclude(errors=None).exclude(errors='')
 
-        result_objs = result_objs.order_by(F('completed_part').desc(nulls_first=True),
-                                           'component__slug')
+        result_objs_query = result_objs_query.order_by(F('completed_part').desc(nulls_first=True),
+                                                       'component__slug')
 
+        result_objs = list(result_objs_query)
+        # append results that should be complete but can't be read
+        result_objs += [r for r in self.results.filter(search_completed__isnull=False) if not r.check_results()]
+
+        # loop through the linked ComponentSearchResults.
+        # for each component, we have to either run the query (perform_search)
+        # or read the results that were already collected (get_results)
         for result_obj in result_objs:
-            # Check if search has been completed by now by a concurrent
-            # search. If so, continue
             result_obj.refresh_from_db()
+            # if search has been completed, we expect to be able to read the results
             if result_obj.search_completed and not result_obj.errors:
-                continue
+                # kinda roundabout way to make sure the results are readable before skipping it
+                # make sure the results are accessible, because reading the cache might fail
+                if result_obj.check_results():
+                    # results are readable, skip the rest of the loop
+                    continue
             try:
                 result_obj.perform_search(self.id)
             except SearchError:
+                logger.error('Failed executing query for ComponentSearchResult (%d)', result_obj.pk)
                 raise
+
             # Check if search has been cancelled in the meantime
             self.refresh_from_db(fields=['cancelled'])
             if self.cancelled:
+                # skip the rest of the components
                 break
 
     def get_errors(self) -> str:
