@@ -29,6 +29,11 @@ const links: Link[] = [
         proxy: false,
     },
     {
+        name: 'About',
+        link: '/about',
+        proxy: false,
+    },
+    {
         name: 'Documentation',
         link: '/documentation',
         proxy: false,
@@ -42,6 +47,7 @@ const mainLinksName = [
     'Example-based Search',
     'XPath Search',
     'Multiword Expressions',
+    'About',
     'Documentation'
 ];
 
