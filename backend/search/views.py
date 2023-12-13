@@ -23,7 +23,7 @@ from .types import ResultSet
 from services.basex import basex
 
 from sastadev.treebankfunctions import indextransform
-from mwe_query.lcat import expandnonheadwords
+from mwe_query.canonicalform import expandfull
 
 import logging
 
@@ -104,7 +104,7 @@ def _get_or_create_components(component_slugs, treebank):
 def filter_expand(results: ResultSet) -> ResultSet:
     for result in results:
         try:
-            result.tree = indextransform(expandnonheadwords(result.tree))
+            result.tree = expandfull(result.tree)
         except Exception:
             log.exception('Failed expanding index nodes for sentence')
         yield result
