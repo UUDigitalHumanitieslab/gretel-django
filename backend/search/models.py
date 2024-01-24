@@ -54,15 +54,9 @@ class ComponentSearchResult(models.Model):
     def __str__(self):
         return '"{}…" for {}'.format(self.xpath[:10], self.component)
 
-    def _get_cache_path(self, create_dir: bool) -> pathlib.Path:
-        """Get the Path of the caching file corresponding to this
-        ComponentSearchResult. If create_dir is True, create the parent
-        directory if needed."""
-        if create_dir:
-            try:
-                settings.CACHING_DIR.mkdir(exist_ok=True, parents=True)
-            except (FileExistsError, FileNotFoundError):
-                raise SearchError('Could not create caching directory')
+    def _get_cache_path(self) -> pathlib.Path:
+        """Get the Path of the caching file corresponding to this ComponentSearchResult."""
+        settings.CACHING_DIR.mkdir(exist_ok=True, parents=True)
         return settings.CACHING_DIR / str(self.id)
 
     def check_results(self) -> bool:
@@ -76,7 +70,7 @@ class ComponentSearchResult(models.Model):
 
     def get_results(self) -> ResultSet:
         """Return results as a dict"""
-        cache_filename = str(self._get_cache_path(False))
+        cache_filename = str(self._get_cache_path())
         cache_file = open(cache_filename, 'r')
 
         results = cache_file.read()
@@ -125,7 +119,7 @@ class ComponentSearchResult(models.Model):
         self.number_of_results = 0
         # Open cache file
         try:
-            resultsfile = self._get_cache_path(True).open(mode='w')
+            resultsfile = self._get_cache_path().open(mode='w')
         except OSError:
             raise SearchError('Could not open caching file')
         try:
@@ -183,7 +177,7 @@ class ComponentSearchResult(models.Model):
                     if query_id is not None and self._was_query_cancelled(query_id):
                         cancelled = True
                         break
-            self.cache_size = self._get_cache_path(False).stat().st_size
+            self.cache_size = self._get_cache_path().stat().st_size
             if not cancelled:
                 self.search_completed = timezone.now()
         except Exception as err:
@@ -192,12 +186,12 @@ class ComponentSearchResult(models.Model):
         self.save()
 
     def init_cache_file(self):
-        self._get_cache_path(False).touch()
+        self._get_cache_path().touch()
 
     def delete_cache_file(self):
         """Delete the cache file belonging to this ComponentSearchResult.
         This method is called automatically on delete."""
-        cache_path = self._get_cache_path(False)
+        cache_path = self._get_cache_path()
         cache_path.unlink(missing_ok=True)
         logger.info('Deleted cache for ComponentSearchResult with ID {}.'
                     .format(self.id))
