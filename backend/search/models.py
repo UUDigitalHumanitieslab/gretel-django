@@ -70,11 +70,7 @@ class ComponentSearchResult(models.Model):
 
     def get_results(self) -> ResultSet:
         """Return results as a dict"""
-        cache_filename = str(self._get_cache_path())
-        cache_file = open(cache_filename, 'r')
-
-        results = cache_file.read()
-        cache_file.close()
+        results = self._get_cache_path().read_text()
         self.last_accessed = timezone.now()
         # This method may be called from multiple processes while the query is still
         # running. If we save the entire model, we will overwrite the progress
