@@ -91,7 +91,8 @@ class ComponentSearchResult(models.Model):
             # Cache file is not present or not readable. This may happen when
             # results are fetched but searching has not yet started, or if
             # the cache file was deleted. Go on and return an empty set -
-            # 
+            # this is not problematic because an inconsistency between model
+            # and cache will be detected by the code that performs the search.
             results = ''
         self.last_accessed = timezone.now()
         # This method may be called from multiple processes while the query is still
