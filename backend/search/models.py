@@ -83,7 +83,7 @@ class ComponentSearchResult(models.Model):
             return size_equal
 
     def get_results(self) -> ResultSet:
-        """Return results as a dict"""
+        """Return results as a ResultSet (a list of ``Result`` objects)."""
         cache_path = self._get_cache_path()
         try:
             results = cache_path.read_text()
@@ -93,7 +93,7 @@ class ComponentSearchResult(models.Model):
             # the cache file was deleted. Go on and return an empty set -
             # this is not problematic because an inconsistency between model
             # and cache will be detected by the code that performs the search.
-            results = ''
+            return []
         self.last_accessed = timezone.now()
         # This method may be called from multiple processes while the query is still
         # running. If we save the entire model, we will overwrite the progress
