@@ -72,7 +72,7 @@
     </div>
 </div>
 <ng-container *ngFor="let treebank of treebanks">
-    <ng-container *ngIf="treebank.selected ||
+    <ng-container *ngIf="treebank.selected || treebank.opened ||
         (((treebank.displayName | highlightMatch:filterText) || (treebank.description | highlightMatch:filterText) || (showUserTags && (treebank.userName | highlightMatch:filterText))) &&
          ((showPreConfigured && treebank.preConfigured) ||
           (showUsers.indexOf(treebank.userId) >= 0)))">
@@ -101,7 +101,7 @@
                 </ng-container>
             </label>
         </div>
-        <div *ngIf="treebank.selected" class="box-is-shadowless" [@slideDown]>
+        <div *ngIf="treebank.selected || treebank.opened" class="box-is-shadowless" [@slideDown]>
             <grt-sub-treebanks [treebank]="treebank"></grt-sub-treebanks>
         </div>
     </ng-container>
