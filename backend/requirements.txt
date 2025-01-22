@@ -121,11 +121,12 @@ murmurhash==1.0.9
     #   preshed
     #   spacy
     #   thinc
-mwe-query==0.0.4
+mwe-query==0.1.0
     # via -r requirements.in
 numpy==1.24.4
     # via
     #   blis
+    #   pandas
     #   spacy
     #   thinc
 openpyxl==3.1.2
@@ -135,8 +136,12 @@ packaging==23.1
     #   pytest
     #   spacy
     #   thinc
+pandas==2.0.3
+    # via mwe-query
 pathy==0.10.2
     # via spacy
+pivottablejs==0.9.0
+    # via mwe-query
 pluggy==1.2.0
     # via pytest
 preshed==3.0.8
@@ -166,9 +171,13 @@ pytest-django==4.5.2
 pytest-xdist==3.3.1
     # via -r requirements.in
 python-dateutil==2.8.2
-    # via celery
+    # via
+    #   celery
+    #   pandas
 pytz==2023.3
-    # via djangorestframework
+    # via
+    #   djangorestframework
+    #   pandas
 pyyaml==6.0.1
     # via pyyaml-include
 pyyaml-include==1.3.1
@@ -183,7 +192,7 @@ requests==2.31.0
     #   folia
     #   mwe-query
     #   spacy
-sastadev==0.1.1
+sastadev==0.2.4
     # via
     #   auchann
     #   mwe-query
@@ -240,6 +249,7 @@ tzdata==2023.3
     # via
     #   backports-zoneinfo
     #   celery
+    #   pandas
 urllib3==1.26.16
     # via
     #   -r requirements.in

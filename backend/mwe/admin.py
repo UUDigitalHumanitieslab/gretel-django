@@ -5,7 +5,7 @@ from .models import CanonicalForm, XPathQuery
 
 @admin.register(CanonicalForm)
 class CanonicalFormAdmin(admin.ModelAdmin):
-    pass
+    search_fields = ('text',)
 
 
 @admin.register(XPathQuery)

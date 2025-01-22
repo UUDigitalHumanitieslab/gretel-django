@@ -24,9 +24,8 @@ from .tasks import run_search_query
 from .types import Result, ResultSet
 from services.basex import basex
 
-from sastadev.treebankfunctions import indextransform
-from mwe_query.lcat import expandnonheadwords
 from mwe_query import analyze_mwe_hit
+from mwe_query.canonicalform import expandfull
 
 import logging
 
@@ -214,7 +213,7 @@ def mwe_include(queries: List[str]) -> Callable[[ResultSet], ResultSet]:
 def filter_expand(results: ResultSet) -> ResultSet:
     for result in results:
         try:
-            result.tree = indextransform(expandnonheadwords(result.tree))
+            result.tree = expandfull(result.tree)
         except Exception:
             log.exception('Failed expanding index nodes for sentence')
         yield result
