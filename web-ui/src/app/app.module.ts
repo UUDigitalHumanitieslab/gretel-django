@@ -85,6 +85,7 @@ import { HighlightMatchPipe } from './highlight-match.pipe';
 import { TransitionNumbersPipe } from './transition-numbers.pipe';
 import { QuerySetComponent } from './components/step/query-set/query-set.component';
 import { MweResultsComponent } from './components/step/mwe-results/mwe-results.component';
+import { LegacyComponent } from './pages/legacy-component';
 
 export const declarations: any[] = [
     AddressComponent,
@@ -112,6 +113,7 @@ export const declarations: any[] = [
     AboutPageComponent,
     HomeContentComponent,
     HomePageComponent,
+    LegacyComponent,
     LoginStatusComponent,
     MatrixComponent,
     MatrixOptionComponent,
