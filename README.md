@@ -1,5 +1,8 @@
 # GrETEL 5
 
+This fork has been merged back into [https://github.com/CentreForDigitalHumanities/gretel](github.com/CentreForDigitalHumanities/gretel).
+Please go there for the current version.
+
 [![Actions Status](https://github.com/CentreForDigitalHumanities/gretel/workflows/Tests/badge.svg)](https://github.com/CentreForDigitalHumanities/gretel/actions)
 [![DOI](https://zenodo.org/badge/95562504.svg)](https://zenodo.org/badge/latestdoi/95562504)
 
