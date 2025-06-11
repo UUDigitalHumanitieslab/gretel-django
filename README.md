@@ -1,6 +1,6 @@
 # GrETEL 5
 
-This fork has been merged back into [https://github.com/CentreForDigitalHumanities/gretel](github.com/CentreForDigitalHumanities/gretel).
+This fork has been merged back into [github.com/CentreForDigitalHumanities/gretel](https://github.com/CentreForDigitalHumanities/gretel).
 Please go there for the current version.
 
 [![Actions Status](https://github.com/CentreForDigitalHumanities/gretel/workflows/Tests/badge.svg)](https://github.com/CentreForDigitalHumanities/gretel/actions)
